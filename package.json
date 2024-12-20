@@ -49,6 +49,7 @@
   },
   "dependencies": {
     "epubjs": "^0.3.93",
+    "react-reader": "^2.0.12",
     "react-swipeable": "^7.0.2"
   },
   "devDependencies": {
