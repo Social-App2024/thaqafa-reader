@@ -10,6 +10,7 @@ import { Scroll } from './examples/Scroll'
 import { DisableContextMenu } from './examples/DisableContextMenu'
 import { SmoothScroll } from './examples/SmoothScroll'
 import { CustomFont } from './examples/CustomFont'
+import { BooksList }  from './components/BooksList';
 
 const App = () => {
   return (
@@ -53,7 +54,8 @@ const App = () => {
               ))}
             </nav>
           </header>
-          <main>
+          <main className='flex'>
+            <BooksList/>
             <Routes>
               <Route path="/styling" element={<Styling />} />
               <Route path="/persist" element={<Persist />} />
