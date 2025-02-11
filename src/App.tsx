@@ -54,7 +54,7 @@ const App = () => {
               ))}
             </nav>
           </header>
-          <main className='flex'>
+          <main className='flex items-start'>
             <BooksList/>
             <Routes>
               <Route path="/styling" element={<Styling />} />

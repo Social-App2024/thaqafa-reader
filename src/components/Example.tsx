@@ -9,11 +9,11 @@ type Props = {
 
 export const Example = ({ title, actions, children, above = null }: Props) => {
   return (
-    <div className="w-3/4 grid grid-cols-1 gap-4">
-      <div className="flex items-center gap-2 flex-wrap justify-between">
-        <h1 className="h1">{title}</h1>
+    <div className="w-full grid grid-cols-1 gap-4">
+      <div className="flex items-start gap-2 flex-wrap justify-between">
+        <h1 className="h1 m-0 p-0">{title}</h1>
         {actions && (
-          <div className="flex items-start flex-wrap gap-2">{actions}</div>
+          <div className="flex items-start flex-wrap gap-2 m-0 p-0">{actions}</div>
         )}
       </div>
       {above}
