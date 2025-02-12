@@ -9,7 +9,7 @@ const BooksList = () => {
   }, [])
 
   return (
-    <div className="flex flex-col gap-4 py-8 px-4 items-center">
+    <div className="flex flex-col gap-4 px-4 items-center">
       {books.map((book, index) => (
         <>
           <a href={book.url}>
