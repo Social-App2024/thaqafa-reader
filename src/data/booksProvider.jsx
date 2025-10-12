@@ -1,6 +1,6 @@
 import { createContext, useState, useContext } from "react";
 
-const BooksContext = createContext(null);
+const BooksContext = createContext(undefined);
 
 const booksList = [{
     bookId: "1",

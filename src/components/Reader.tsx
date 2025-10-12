@@ -8,7 +8,7 @@ import ReaderWrapper from './ReaderWrapper'
 import { useBooks } from '../data/booksProvider'
 
 export const Reader = () => {
-  const booksContext = useBooks()
+  const booksContext = useBooks() as any
   const [largeText, setLargeText] = useState(false)
   const rendition = useRef<Rendition | undefined>(undefined)
   const [location, setLocation] = useState<string | number>(0)
