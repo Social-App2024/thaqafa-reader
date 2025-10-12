@@ -5,19 +5,31 @@ import type { Contents, Rendition } from 'epubjs'
 import { DEMO_URL, DEMO_NAME } from '../components/config'
 import { Example } from '../components/Example'
 import ReaderWrapper from './ReaderWrapper'
+import { useBooks } from '../data/booksProvider'
 
 export const Reader = () => {
+  const booksContext = useBooks()
   const [largeText, setLargeText] = useState(false)
   const rendition = useRef<Rendition | undefined>(undefined)
   const [location, setLocation] = useState<string | number>(0)
+
   useEffect(() => {
     rendition.current?.themes.fontSize(largeText ? '140%' : '100%')
   }, [largeText])
+
+  // Reset location when book changes
+  useEffect(() => {
+    setLocation(0)
+  }, [booksContext?.selectedBook?.url])
+
+  const bookUrl = booksContext?.selectedBook?.url || DEMO_URL
+  const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
+
   return (
     <ReaderWrapper>
       <ReactReader
-        url={DEMO_URL}
-        title={DEMO_NAME}
+        url={bookUrl}
+        title={bookTitle}
         location={location}
         locationChanged={(loc: string) => setLocation(loc)}
         getRendition={(_rendition: Rendition) => {

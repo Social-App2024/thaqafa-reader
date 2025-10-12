@@ -14,7 +14,7 @@ const booksList = [{
 {
     bookId: "2",
     title: "Book 2",
-    url: "/files/alice.epub", 
+    url: "/files/book1.epub", 
     author: "Hofman", 
     desc: "fiction",
     isRTL: false,
@@ -23,7 +23,7 @@ const booksList = [{
 {
     bookId: "3",
     title: "Book 3",
-    url: "/files/alice.epub", 
+    url: "/files/book2.epub", 
     author: "Hofman", 
     desc: "fiction",
     isRTL: false,
@@ -32,7 +32,7 @@ const booksList = [{
 {
     bookId: "4",
     title: "Book 4",
-    url: "/files/alice.epub", 
+    url: "/files/book3.epub", 
     author: "Hofman", 
     desc: "fiction",
     isRTL: false,
@@ -42,7 +42,7 @@ const booksList = [{
 const myBook = {
     bookId: "2",
     title: "Book 2",
-    url: "/files/alice.epub", 
+    url: "/files/book4.epub", 
     author: "Hofman", 
     desc: "fiction",
     isRTL: false,
@@ -59,7 +59,8 @@ export const BooksProvider = ({ children }) => {
     <>
       <BooksContext.Provider value={{
         books: books,
-        selectedBook: selectedBook
+        selectedBook: selectedBook,
+        setSelectedBook: setSelectedBook
       }}>
         {children}
       </BooksContext.Provider>
