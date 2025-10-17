@@ -15,10 +15,10 @@ const App = () => {
       <NavBarMock />
       <div className="flex flex-col w-full">
         <div className="flex items-start gap-x-4 w-full">
-          <div className="hidden md:block w-40 h-screen overflow-y-auto">
-            <BooksList />
-          </div>
-          <div ref={readerRef} className="grow relative">
+                      <div className="hidden md:block w-40 h-screen overflow-y-auto">
+              <BooksList />
+            </div>
+<div ref={readerRef} className="grow relative">
             <Reader />
           </div>
         </div>
