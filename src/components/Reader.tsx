@@ -29,20 +29,6 @@ export const Reader = () => {
     if (rendition.current) {
       let currentHighlight: string | null = null
       let currentContents: Contents | null = null
-      let lastMouseUpPosition = { x: 0, y: 0 }
-
-      // Track mouse position on mouseup (when selection is completed)
-      function trackMouseUp(e: MouseEvent) {
-        // Get the iframe element to calculate the offset
-        const iframe = document.querySelector('iframe')
-        if (iframe) {
-          const iframeRect = iframe.getBoundingClientRect()
-          lastMouseUpPosition = {
-            x: iframeRect.left + e.clientX,
-            y: iframeRect.top + e.clientY
-          }
-        }
-      }
 
       function setRenderSelection(cfiRange: string, contents: Contents) {
         if (rendition.current) {
@@ -78,14 +64,27 @@ export const Reader = () => {
           currentHighlight = cfiRange
           currentContents = contents
 
-          // Show context menu immediately after selection at mouse position
-          setContextMenu({
-            x: lastMouseUpPosition.x,
-            y: lastMouseUpPosition.y + 10,
-            text: selectedText
-          })
-
+          // Show context menu immediately after selection
+          // Get the actual bounding rectangle of the selected text from the iframe content
           const selection = contents.window.getSelection()
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0)
+            const rangeRect = range.getBoundingClientRect()
+
+            // Get iframe position on the page
+            const iframe = document.querySelector('iframe')
+            if (iframe) {
+              const iframeRect = iframe.getBoundingClientRect()
+
+              // Calculate absolute position: iframe position + range position within iframe
+              setContextMenu({
+                x: iframeRect.left + rangeRect.left + (rangeRect.width / 2),
+                y: iframeRect.top + rangeRect.bottom + 5,
+                text: selectedText
+              })
+            }
+          }
+
           selection?.removeAllRanges()
         }
       }
@@ -106,14 +105,19 @@ export const Reader = () => {
         }
       }
 
+      // Close context menu on window resize to prevent positioning issues
+      function handleResize() {
+        setContextMenu(null)
+      }
+
       rendition.current.on('selected', setRenderSelection)
       rendition.current.on('mousedown', handleMouseDown)
-      rendition.current.on('mouseup', trackMouseUp)
+      window.addEventListener('resize', handleResize)
 
       return () => {
         rendition.current?.off('selected', setRenderSelection)
         rendition.current?.off('mousedown', handleMouseDown)
-        rendition.current?.off('mouseup', trackMouseUp)
+        window.removeEventListener('resize', handleResize)
       }
     }
   }, [rendition.current])
