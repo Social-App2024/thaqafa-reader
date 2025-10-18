@@ -29,11 +29,19 @@ export const Reader = () => {
     if (rendition.current) {
       let currentHighlight: string | null = null
       let currentContents: Contents | null = null
-      let lastMousePosition = { x: 0, y: 0 }
+      let lastMouseUpPosition = { x: 0, y: 0 }
 
-      // Track mouse position during selection
-      function trackMousePosition(e: MouseEvent) {
-        lastMousePosition = { x: e.clientX, y: e.clientY }
+      // Track mouse position on mouseup (when selection is completed)
+      function trackMouseUp(e: MouseEvent) {
+        // Get the iframe element to calculate the offset
+        const iframe = document.querySelector('iframe')
+        if (iframe) {
+          const iframeRect = iframe.getBoundingClientRect()
+          lastMouseUpPosition = {
+            x: iframeRect.left + e.clientX,
+            y: iframeRect.top + e.clientY
+          }
+        }
       }
 
       function setRenderSelection(cfiRange: string, contents: Contents) {
@@ -53,11 +61,15 @@ export const Reader = () => {
             {},
             (e: MouseEvent) => {
               // Show context menu on highlight click
-              setContextMenu({
-                x: e.clientX,
-                y: e.clientY + 5,
-                text: selectedText
-              })
+              const iframe = document.querySelector('iframe')
+              if (iframe) {
+                const iframeRect = iframe.getBoundingClientRect()
+                setContextMenu({
+                  x: iframeRect.left + e.clientX,
+                  y: iframeRect.top + e.clientY + 10,
+                  text: selectedText
+                })
+              }
             },
             'hl',
             { fill: 'red', 'fill-opacity': '0.5', 'mix-blend-mode': 'multiply' }
@@ -68,8 +80,8 @@ export const Reader = () => {
 
           // Show context menu immediately after selection at mouse position
           setContextMenu({
-            x: lastMousePosition.x,
-            y: lastMousePosition.y + 5,
+            x: lastMouseUpPosition.x,
+            y: lastMouseUpPosition.y + 10,
             text: selectedText
           })
 
@@ -96,12 +108,12 @@ export const Reader = () => {
 
       rendition.current.on('selected', setRenderSelection)
       rendition.current.on('mousedown', handleMouseDown)
-      rendition.current.on('mousemove', trackMousePosition)
+      rendition.current.on('mouseup', trackMouseUp)
 
       return () => {
         rendition.current?.off('selected', setRenderSelection)
         rendition.current?.off('mousedown', handleMouseDown)
-        rendition.current?.off('mousemove', trackMousePosition)
+        rendition.current?.off('mouseup', trackMouseUp)
       }
     }
   }, [rendition.current])
