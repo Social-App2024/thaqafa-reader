@@ -12,6 +12,8 @@ export const Reader = () => {
   const [largeText, setLargeText] = useState(false)
   const rendition = useRef<Rendition | undefined>(undefined)
   const [location, setLocation] = useState<string | number>(0)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null)
+  const [highlightedText, setHighlightedText] = useState<string>('')
 
   useEffect(() => {
     rendition.current?.themes.fontSize(largeText ? '140%' : '100%')
@@ -22,8 +24,95 @@ export const Reader = () => {
     setLocation(0)
   }, [booksContext?.selectedBook?.url])
 
+  // Handle text selection and highlighting
+  useEffect(() => {
+    if (rendition.current) {
+      let currentHighlight: string | null = null
+      let currentContents: Contents | null = null
+      let lastMousePosition = { x: 0, y: 0 }
+
+      // Track mouse position during selection
+      function trackMousePosition(e: MouseEvent) {
+        lastMousePosition = { x: e.clientX, y: e.clientY }
+      }
+
+      function setRenderSelection(cfiRange: string, contents: Contents) {
+        if (rendition.current) {
+          // Remove previous highlight if exists
+          if (currentHighlight) {
+            rendition.current.annotations.remove(currentHighlight, 'highlight')
+          }
+
+          const selectedText = rendition.current.getRange(cfiRange).toString()
+          console.log('Selected text:', selectedText)
+          setHighlightedText(selectedText)
+
+          rendition.current.annotations.add(
+            'highlight',
+            cfiRange,
+            {},
+            (e: MouseEvent) => {
+              // Show context menu on highlight click
+              setContextMenu({
+                x: e.clientX,
+                y: e.clientY + 5,
+                text: selectedText
+              })
+            },
+            'hl',
+            { fill: 'red', 'fill-opacity': '0.5', 'mix-blend-mode': 'multiply' }
+          )
+
+          currentHighlight = cfiRange
+          currentContents = contents
+
+          // Show context menu immediately after selection at mouse position
+          setContextMenu({
+            x: lastMousePosition.x,
+            y: lastMousePosition.y + 5,
+            text: selectedText
+          })
+
+          const selection = contents.window.getSelection()
+          selection?.removeAllRanges()
+        }
+      }
+
+      function handleMouseDown() {
+        // Close context menu
+        setContextMenu(null)
+
+        // Remove highlight when mouse is pressed elsewhere
+        if (currentHighlight && rendition.current) {
+          rendition.current.annotations.remove(currentHighlight, 'highlight')
+          currentHighlight = null
+          setHighlightedText('')
+        }
+        if (currentContents) {
+          const selection = currentContents.window.getSelection()
+          selection?.removeAllRanges()
+        }
+      }
+
+      rendition.current.on('selected', setRenderSelection)
+      rendition.current.on('mousedown', handleMouseDown)
+      rendition.current.on('mousemove', trackMousePosition)
+
+      return () => {
+        rendition.current?.off('selected', setRenderSelection)
+        rendition.current?.off('mousedown', handleMouseDown)
+        rendition.current?.off('mousemove', trackMousePosition)
+      }
+    }
+  }, [rendition.current])
+
   const bookUrl = booksContext?.selectedBook?.url || DEMO_URL
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
+
+  const handleShare = () => {
+    console.log(`shared text: ${contextMenu?.text}`)
+    setContextMenu(null)
+  }
 
   return (
     <ReaderWrapper>
@@ -37,6 +126,24 @@ export const Reader = () => {
           rendition.current.themes.fontSize(largeText ? '140%' : '100%')
         }}
       />
+
+      {contextMenu && (
+        <div
+          className="fixed bg-gray-200 text-gray-700 rounded shadow-lg z-50"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+            transform: 'translateX(-50%)'
+          }}
+        >
+          <button
+            className="px-3 py-1 hover:bg-gray-300 w-full text-left text-sm"
+            onClick={handleShare}
+          >
+            Share
+          </button>
+        </div>
+      )}
     </ReaderWrapper>
   )
 }
