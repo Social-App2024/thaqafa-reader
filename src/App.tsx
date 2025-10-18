@@ -1,10 +1,10 @@
-import { BrowserRouter, Route, NavLink, Routes } from 'react-router-dom'
-import cx from 'classnames'
+import { Route, Routes } from 'react-router-dom'
 
 import BooksList from './components/BooksList'
 import { useRef } from 'react'
 import Reader from './components/Reader'
 import NavBarMock from './components/NavbarMock'
+import { Selection } from './examples/Selection'
 
 const App = () => {
   const readerRef = useRef<HTMLDivElement>(null)
@@ -14,14 +14,19 @@ const App = () => {
       {/* HEADER IS ONLY THERE FOR MOCKING PURPOSES, FEEL FREE TO REMOVE IT IF YOU WANT THE CLEAN PAGE! */}
       <NavBarMock />
       <div className="flex flex-col w-full">
-        <div className="flex items-start gap-x-4 w-full">
-                      <div className="hidden md:block w-40 h-screen overflow-y-auto">
-              <BooksList />
+        <Routes>
+          <Route path="/" element={
+            <div className="flex items-start gap-x-4 w-full">
+              <div className="hidden md:block w-40 h-screen overflow-y-auto">
+                <BooksList />
+              </div>
+              <div ref={readerRef} className="grow relative">
+                <Reader />
+              </div>
             </div>
-<div ref={readerRef} className="grow relative">
-            <Reader />
-          </div>
-        </div>
+          } />
+          <Route path="/selection" element={<Selection />} />
+        </Routes>
       </div>
     </div>
   )

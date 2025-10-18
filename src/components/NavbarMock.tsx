@@ -60,7 +60,7 @@ export default function NavBarMock() {
           <NavbarCenterItem link={'/'}> A </NavbarCenterItem>|
           <NavbarCenterItem link={'/discover'}> B </NavbarCenterItem>|
           <NavbarCenterItem link={'/people'}> C </NavbarCenterItem>|
-          <NavbarCenterItem link={'/faq'}> D </NavbarCenterItem>
+          <NavbarCenterItem link={'/selection'}> Selection </NavbarCenterItem>
         </div>
         <div className="flex items-center w-1/4 justify-end">
           <div className="hidden lg:flex px-10 font-space items-center justify-center ">
