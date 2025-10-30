@@ -6,7 +6,7 @@ const BooksList = () => {
   const [searchQuery, setSearchQuery] = useState('')
 
   const getThumbnail = useCallback((index) => {
-    return `/images/book${index + 1}.jpg`
+    return books[index].frontCoverUrl;
   }, [])
 
   const handleBookClick = useCallback((book) => {
