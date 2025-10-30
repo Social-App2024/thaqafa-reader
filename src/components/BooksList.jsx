@@ -6,14 +6,15 @@ const BooksList = () => {
   const [searchQuery, setSearchQuery] = useState('')
 
   const getThumbnail = useCallback((index) => {
-    return books[index].frontCoverUrl;
-  }, [])
+    return books?.[index]?.frontCoverUrl;
+  }, [books])
 
   const handleBookClick = useCallback((book) => {
     setSelectedBook(book)
   }, [setSelectedBook])
 
   const filteredBooks = useMemo(() => {
+    if (!books || !Array.isArray(books)) return []
     if (!searchQuery.trim()) return books
 
     const query = searchQuery.toLowerCase()
@@ -22,6 +23,14 @@ const BooksList = () => {
       book.author?.toLowerCase().includes(query)
     )
   }, [books, searchQuery])
+
+  if (!books || books.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <p className="text-gray-500">No books available</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4 items-center">
