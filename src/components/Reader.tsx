@@ -58,7 +58,7 @@ export const Reader = () => {
               }
             },
             'hl',
-            { fill: 'red', 'fill-opacity': '0.5', 'mix-blend-mode': 'multiply' }
+            { fill: '#03b1fc', 'fill-opacity': '0.5', 'mix-blend-mode': 'multiply' }
           )
 
           currentHighlight = cfiRange
