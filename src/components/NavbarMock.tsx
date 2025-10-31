@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { useDarkMode } from '../data/darkModeProvider'
 
 const LanguageButton = ({
   children,
@@ -45,6 +46,7 @@ const NavbarCenterItem = ({
 
 export default function NavBarMock() {
   const profile: { id: number; name: string } = { id: 4, name: 'testing' }
+  const { isDarkMode, toggleDarkMode } = useDarkMode()
 
   return (
     <>
@@ -75,6 +77,18 @@ export default function NavBarMock() {
                 </div>
               )
             })}
+          </div>
+          {/* Dark Mode Toggle */}
+          <div className="mr-4 flex items-center">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isDarkMode}
+                onChange={toggleDarkMode}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+            </label>
           </div>
           <div className="mr-4">
             {/* Profile Icon for Quick Access.. yippe */}

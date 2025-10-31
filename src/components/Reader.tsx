@@ -6,9 +6,11 @@ import { DEMO_URL, DEMO_NAME } from '../components/config'
 import { Example } from '../components/Example'
 import ReaderWrapper from './ReaderWrapper'
 import { useBooks } from '../data/booksProvider'
+import { useDarkMode } from '../data/darkModeProvider'
 
 export const Reader = () => {
   const booksContext = useBooks() as any
+  const { isDarkMode } = useDarkMode()
   const [largeText, setLargeText] = useState(false)
   const rendition = useRef<Rendition | undefined>(undefined)
   const [location, setLocation] = useState<string | number>(0)
@@ -20,6 +22,19 @@ export const Reader = () => {
   useEffect(() => {
     rendition.current?.themes.fontSize(largeText ? '140%' : '100%')
   }, [largeText])
+
+  // Apply dark mode theme
+  useEffect(() => {
+    if (rendition.current) {
+      if (isDarkMode) {
+        rendition.current.themes.override('color', '#e5e5e5')
+        rendition.current.themes.override('background', '#1a1a1a')
+      } else {
+        rendition.current.themes.override('color', '#000000')
+        rendition.current.themes.override('background', '#ffffff')
+      }
+    }
+  }, [isDarkMode, rendition.current])
 
   // Reset location when book changes
   useEffect(() => {
