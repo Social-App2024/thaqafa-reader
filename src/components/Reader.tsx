@@ -7,6 +7,7 @@ import { Example } from '../components/Example'
 import ReaderWrapper from './ReaderWrapper'
 import { useBooks } from '../data/booksProvider'
 import { useDarkMode } from '../data/darkModeProvider'
+import { ReactReaderStyle } from '../../lib/ReactReader/style'
 
 export const Reader = () => {
   const booksContext = useBooks() as any
@@ -24,17 +25,21 @@ export const Reader = () => {
   }, [largeText])
 
   // Apply dark mode theme
-  useEffect(() => {
+  const applyTheme = () => {
     if (rendition.current) {
       if (isDarkMode) {
         rendition.current.themes.override('color', '#e5e5e5')
-        rendition.current.themes.override('background', '#1a1a1a')
+        rendition.current.themes.override('background', '#000000')
       } else {
         rendition.current.themes.override('color', '#000000')
         rendition.current.themes.override('background', '#ffffff')
       }
     }
-  }, [isDarkMode, rendition.current])
+  }
+
+  useEffect(() => {
+    applyTheme()
+  }, [isDarkMode])
 
   // Reset location when book changes
   useEffect(() => {
@@ -262,6 +267,15 @@ export const Reader = () => {
         getRendition={(_rendition: Rendition) => {
           rendition.current = _rendition
           rendition.current.themes.fontSize(largeText ? '140%' : '100%')
+          // Apply theme immediately when rendition is ready
+          applyTheme()
+        }}
+        readerStyles={{
+          ...ReactReaderStyle,
+          readerArea: {
+            ...ReactReaderStyle.readerArea,
+            backgroundColor: isDarkMode ? '#000000' : '#ffffff',
+          },
         }}
       />
 
