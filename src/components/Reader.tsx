@@ -186,20 +186,17 @@ export const Reader = () => {
     const bottomPadding = 100
     canvas.height = topPadding + (lineCount * lineHeight) + bottomPadding
 
-    // Background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(0, '#03b1fc')
-    gradient.addColorStop(1, '#0277bd')
-    ctx.fillStyle = gradient
+    // Background - off-white color
+    ctx.fillStyle = '#f5f5f5'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
     // Draw decorative quote marks
     ctx.font = `bold ${quotationMarkSize}px Georgia`
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'
     ctx.fillText('"', padding - 10, 60)
 
     // Draw quote text
-    ctx.fillStyle = '#ffffff'
+    ctx.fillStyle = '#000000'
     ctx.font = `bold ${quoteFontSize}px Arial`
     ctx.textAlign = 'left'
 
@@ -224,7 +221,7 @@ export const Reader = () => {
 
     // Draw book info
     y += 50
-    ctx.fillStyle = '#ffffff'
+    ctx.fillStyle = '#000000'
     ctx.font = `italic ${titleFontSize}px Arial`
     ctx.fillText(`— ${title}`, padding, y)
 
