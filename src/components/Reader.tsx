@@ -318,7 +318,7 @@ export const Reader = () => {
                   link.href = shareDialog.imageUrl
                   link.click()
                 }}
-                className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="px-3 py-1.5 text-sm bg-black text-white rounded hover:bg-gray-700"
               >
                 Share
               </button>
