@@ -5,6 +5,7 @@ import { useRef } from 'react'
 import Reader from './components/Reader'
 import NavBarMock from './components/NavbarMock'
 import { Selection } from './examples/Selection'
+import { Styling } from './examples/Styling'
 
 const App = () => {
   const readerRef = useRef<HTMLDivElement>(null)
@@ -26,6 +27,7 @@ const App = () => {
             </div>
           } />
           <Route path="/selection" element={<Selection />} />
+          <Route path="/styling" element={<Styling />} />
         </Routes>
       </div>
     </div>

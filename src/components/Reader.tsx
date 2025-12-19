@@ -8,6 +8,7 @@ import ReaderWrapper from './ReaderWrapper'
 import { useBooks } from '../data/booksProvider'
 import { useDarkMode } from '../data/darkModeProvider'
 import { ReactReaderStyle } from '../../lib/ReactReader/style'
+import commandFactory from "../api/CommandFactory";
 
 export const Reader = () => {
   const booksContext = useBooks() as any
@@ -67,18 +68,7 @@ export const Reader = () => {
             'highlight',
             cfiRange,
             {},
-            (e: MouseEvent) => {
-              // Show context menu on highlight click
-              const iframe = document.querySelector('iframe')
-              if (iframe) {
-                const iframeRect = iframe.getBoundingClientRect()
-                setContextMenu({
-                  x: iframeRect.left + e.clientX,
-                  y: iframeRect.top + e.clientY + 10,
-                  text: selectedText
-                })
-              }
-            },
+            (e: MouseEvent) => {},
             'hl',
             { fill: '#03b1fc', 'fill-opacity': '0.5', 'mix-blend-mode': 'multiply' }
           )
@@ -326,11 +316,21 @@ export const Reader = () => {
 
             <div className="flex gap-2 justify-end">
               <button
-                onClick={() => {
-                  const link = document.createElement('a')
-                  link.download = 'quote.png'
-                  link.href = shareDialog.imageUrl
-                  link.click()
+                onClick={async () => {
+                  // Execute share command using Command pattern with Factory
+                  const shareCommand = commandFactory.createCommand('share',{
+                    imageUrl: shareDialog.imageUrl,
+                    text: shareDialog.text,
+                    bookTitle: bookTitle,
+                    bookAuthor: bookAuthor
+                  });
+                  await shareCommand.execute()
+
+                  // Original download logic (kept for reference)
+                  // const link = document.createElement('a')
+                  // link.download = 'quote.png'
+                  // link.href = shareDialog.imageUrl
+                  // link.click()
                 }}
                 className="px-3 py-1.5 text-sm bg-black text-white rounded hover:bg-gray-700"
               >
