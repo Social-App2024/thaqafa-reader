@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import useLocalStorageState from 'use-local-storage-state'
 
 interface DarkModeContextType {
