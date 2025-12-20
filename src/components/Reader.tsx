@@ -46,6 +46,7 @@ export const Reader = () => {
   // Reset location when book changes
   useEffect(() => {
     setLocation(0)
+    setContextMenu(null) // Close context menu when book changes
   }, [booksContext?.selectedBook?.url])
 
   // Handle text selection and highlighting

@@ -1,16 +1,6 @@
 import { api } from "./client.js";
-import Command from "./Command.js";
 
-class ShareCommand extends Command {
-    constructor(imageUrl, text, bookTitle, bookAuthor) {
-        super();
-        this.imageUrl = imageUrl;
-        this.text = text;
-        this.bookTitle = bookTitle;
-        this.bookAuthor = bookAuthor;
-    }
-
-    async execute() {
+    async function shareQuote(data) {
         // Download the quote image
         // const link = document.createElement('a');
         // link.download = 'quote.png';
@@ -33,10 +23,4 @@ class ShareCommand extends Command {
         // });
     }
 
-    async undo() {
-        // Share/download actions cannot be undone
-        console.log("Share action cannot be undone");
-    }
-}
-
-export default ShareCommand
+export default shareQuote

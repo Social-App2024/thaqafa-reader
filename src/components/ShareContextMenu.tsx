@@ -1,5 +1,5 @@
 import { useCallback, useState, useMemo } from 'react';
-import commandFactory from "../api/CommandFactory";
+import shareQuote from "../api/ShareCommand"
 
 interface ShareContextMenuProps {
     contextMenu: { x: number; y: number; text: string; bookTitle: string; bookAuthor: string } | null;
@@ -171,13 +171,12 @@ export const ShareContextMenu = ({ contextMenu, onClose }: ShareContextMenuProps
                 <button
                     onClick={async () => {
                     // Execute share command using Command pattern with Factory
-                    const shareCommand = commandFactory.createCommand('share',{
+                    await shareQuote({
                         imageUrl: shareDialog.imageUrl,
                         text: shareDialog.text,
                         bookTitle: bookTitle,
                         bookAuthor: bookAuthor
                     });
-                    await shareCommand.execute()
 
                     // Original download logic (kept for reference)
                     // const link = document.createElement('a')
