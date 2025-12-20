@@ -1,16 +1,39 @@
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useEffect } from 'react';
 import shareQuote from "../api/ShareCommand"
+import { PubSub } from "../util/pubSub";
 
 interface ShareContextMenuProps {
-    contextMenu: { x: number; y: number; text: string; bookTitle: string; bookAuthor: string } | null;
-    onClose: () => void;
+    pubsub: PubSub;
 }
 
-export const ShareContextMenu = ({ contextMenu, onClose }: ShareContextMenuProps) => {
+export const ShareContextMenu = ({ pubsub }: ShareContextMenuProps) => {
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string; bookTitle: string; bookAuthor: string } | null>(null)
     const [shareDialog, setShareDialog] = useState<{ imageUrl: string; text: string } | null>(null)
 
     const bookTitle = contextMenu?.bookTitle || '';
     const bookAuthor = contextMenu?.bookAuthor || '';
+
+    // Subscribe to showContextMenu event from PubSub (true decoupling)
+    useEffect(() => {
+        const subscription = pubsub.subscribe('showContextMenu', (_topic: string, data: any) => {
+            setContextMenu(data);
+        });
+
+        return () => {
+            pubsub.unsubscribe(subscription);
+        };
+    }, [pubsub]);
+
+    // Subscribe to closeContextMenu event
+    useEffect(() => {
+        const subscription = pubsub.subscribe('closeContextMenu', () => {
+            setContextMenu(null);
+        });
+
+        return () => {
+            pubsub.unsubscribe(subscription);
+        };
+    }, [pubsub]);
 
     const generateShareImage = (text: string, title: string, author: string): string => {
         const canvas = document.createElement('canvas')
@@ -114,7 +137,8 @@ export const ShareContextMenu = ({ contextMenu, onClose }: ShareContextMenuProps
         })
         }
 
-        onClose()
+        // Close context menu after opening share dialog
+        setContextMenu(null)
     }
 
     const closeShareDialog = () => {

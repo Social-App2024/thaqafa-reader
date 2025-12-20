@@ -18,7 +18,6 @@ export const Reader = () => {
   const rendition = useRef<Rendition | undefined>(undefined)
   const [location, setLocation] = useState<string | number>(0)
   const [highlightedText, setHighlightedText] = useState<string>('')
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string; bookTitle: string; bookAuthor: string } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pubsubRef = useRef(new PubSub());
 
@@ -46,7 +45,8 @@ export const Reader = () => {
   // Reset location when book changes
   useEffect(() => {
     setLocation(0)
-    setContextMenu(null) // Close context menu when book changes
+    // Publish event to close context menu when book changes
+    pubsubRef.current.publish('closeContextMenu')
   }, [booksContext?.selectedBook?.url])
 
   // Handle text selection and highlighting
@@ -106,8 +106,8 @@ export const Reader = () => {
       }
 
       function handleMouseDown() {
-        // Close context menu
-        setContextMenu(null)
+        // Publish event to close context menu
+        pubsubRef.current.publish('closeContextMenu')
 
         // Remove highlight when mouse is pressed elsewhere
         if (currentHighlight && rendition.current) {
@@ -123,7 +123,7 @@ export const Reader = () => {
 
       // Close context menu on window resize to prevent positioning issues
       function handleResize() {
-        setContextMenu(null)
+        pubsubRef.current.publish('closeContextMenu')
       }
 
       rendition.current.on('selected', setRenderSelection)
@@ -141,22 +141,6 @@ export const Reader = () => {
   const bookUrl = booksContext?.selectedBook?.url || DEMO_URL
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
   const bookAuthor = booksContext?.selectedBook?.author || 'Unknown Author'
-
-  // Subscribe to showContextMenu event
-  useEffect(() => {
-    const pubsub = pubsubRef.current;
-    const subscription = pubsub.subscribe('showContextMenu', (_topic: string, data: any) => {
-      setContextMenu(data);
-    });
-
-    return () => {
-      pubsub.unsubscribe(subscription);
-    };
-  }, []);
-
-  const handleCloseContextMenu = () => {
-    setContextMenu(null);
-  };
 
   return (
     <ReaderWrapper>
@@ -179,7 +163,7 @@ export const Reader = () => {
           },
         }}
       />
-      <ShareContextMenu contextMenu={contextMenu} onClose={handleCloseContextMenu} />
+      <ShareContextMenu pubsub={pubsubRef.current} />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
     </ReaderWrapper>
   )
