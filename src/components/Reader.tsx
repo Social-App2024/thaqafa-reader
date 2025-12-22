@@ -10,6 +10,7 @@ import { useDarkMode } from '../data/darkModeProvider'
 import { ReactReaderStyle } from '../../lib/ReactReader/style'
 import { PubSub } from "../util/pubSub";
 import { ShareContextMenu } from './ShareContextMenu'
+import { fetchBookContent } from '../api/bookContent'
 
 export const Reader = () => {
   const booksContext = useBooks() as any
@@ -20,6 +21,9 @@ export const Reader = () => {
   const [highlightedText, setHighlightedText] = useState<string>('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pubsubRef = useRef(new PubSub());
+  const [bookBlobUrl, setBookBlobUrl] = useState<string | null>(null)
+  const [isLoadingBook, setIsLoadingBook] = useState(false)
+  const [bookLoadError, setBookLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     rendition.current?.themes.fontSize(largeText ? '140%' : '100%')
@@ -48,6 +52,72 @@ export const Reader = () => {
     // Publish event to close context menu when book changes
     pubsubRef.current.publish('closeContextMenu')
   }, [booksContext?.selectedBook?.url])
+
+  // Fetch and manage EPUB blob URL
+  useEffect(() => {
+    const selectedBook = booksContext?.selectedBook
+
+    // Cleanup previous blob URL to prevent memory leaks
+    if (bookBlobUrl) {
+      URL.revokeObjectURL(bookBlobUrl)
+      setBookBlobUrl(null)
+    }
+
+    setBookLoadError(null)
+
+    if (!selectedBook) {
+      return
+    }
+
+    // Check if book uses legacy public URL (demo mode)
+    const isPublicUrl = selectedBook.url?.startsWith('/files/') ||
+                        selectedBook.url?.startsWith('http')
+
+    if (isPublicUrl) {
+      console.log('Using public URL for demo book:', selectedBook.url)
+      setBookBlobUrl(selectedBook.url)
+      return
+    }
+
+    // Book requires authenticated blob fetch
+    if (!selectedBook.bookId) {
+      setBookLoadError('Invalid book: missing bookId')
+      return
+    }
+
+    const loadBookBlob = async () => {
+      setIsLoadingBook(true)
+      setBookLoadError(null)
+
+      try {
+        console.log('Fetching protected EPUB for bookId:', selectedBook.bookId)
+        const blob = await fetchBookContent(selectedBook.bookId)
+        const objectUrl = URL.createObjectURL(blob)
+        setBookBlobUrl(objectUrl)
+        console.log('Book blob loaded successfully')
+      } catch (error: any) {
+        console.error('Failed to load book:', error)
+        setBookLoadError(error.message || 'Failed to load book')
+
+        // Fallback to public URL if available
+        if (selectedBook.url) {
+          console.warn('Falling back to public URL:', selectedBook.url)
+          setBookBlobUrl(selectedBook.url)
+        }
+      } finally {
+        setIsLoadingBook(false)
+      }
+    }
+
+    loadBookBlob()
+
+    // Cleanup on unmount or book change
+    return () => {
+      if (bookBlobUrl) {
+        URL.revokeObjectURL(bookBlobUrl)
+      }
+    }
+  }, [booksContext?.selectedBook?.bookId])
 
   // Handle text selection and highlighting
   useEffect(() => {
@@ -138,9 +208,72 @@ export const Reader = () => {
     }
   }, [rendition.current])
 
-  const bookUrl = booksContext?.selectedBook?.url || DEMO_URL
+  const bookUrl = bookBlobUrl || booksContext?.selectedBook?.url || DEMO_URL
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
   const bookAuthor = booksContext?.selectedBook?.author || 'Unknown Author'
+
+  // Show loading state while fetching book
+  if (isLoadingBook) {
+    return (
+      <ReaderWrapper>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          flexDirection: 'column',
+          gap: '16px',
+          backgroundColor: isDarkMode ? '#000000' : '#ffffff',
+          color: isDarkMode ? '#e5e5e5' : '#000000'
+        }}>
+          <div style={{ fontSize: '18px' }}>Loading book...</div>
+          <div style={{ fontSize: '14px', opacity: 0.7 }}>
+            {booksContext?.selectedBook?.title}
+          </div>
+        </div>
+      </ReaderWrapper>
+    )
+  }
+
+  // Show error state if book load failed
+  if (bookLoadError && !bookBlobUrl) {
+    return (
+      <ReaderWrapper>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          flexDirection: 'column',
+          gap: '16px',
+          backgroundColor: isDarkMode ? '#000000' : '#ffffff',
+          color: isDarkMode ? '#e5e5e5' : '#000000'
+        }}>
+          <div style={{ fontSize: '18px', color: '#ff4444' }}>
+            Failed to load book
+          </div>
+          <div style={{ fontSize: '14px', opacity: 0.7 }}>
+            {bookLoadError}
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              backgroundColor: isDarkMode ? '#333' : '#f0f0f0',
+              color: isDarkMode ? '#e5e5e5' : '#000000',
+              border: '1px solid',
+              borderColor: isDarkMode ? '#555' : '#ccc',
+              borderRadius: '4px'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </ReaderWrapper>
+    )
+  }
 
   return (
     <ReaderWrapper>
