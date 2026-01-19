@@ -12,15 +12,27 @@ export async function fetchBookContent(bookId) {
   }
 
   try {
-    const response = await api.get(`/reader/book-content/${bookId}`, {
+    console.log('[BookContent API] Starting fetch for bookId:', bookId)
+    const response = await api.get(`/reader/content/${bookId}?userId=66b7a5025cf5d67e2eeaa1fb`, {
       responseType: 'blob',  // Critical for binary data
       timeout: 60000,        // 60 seconds for large EPUBs
     });
+
+    console.log('[BookContent API] Response received:', {
+      bookId,
+      dataType: typeof response.data,
+      isBlob: response.data instanceof Blob,
+      blobSize: response.data?.size,
+      blobType: response.data?.type,
+      status: response.status,
+      headers: response.headers
+    })
 
     if (!response.data || !(response.data instanceof Blob)) {
       throw new Error("Invalid response: expected blob data");
     }
 
+    console.log('[BookContent API] ✓ Successfully fetched blob for bookId:', bookId, 'size:', response.data.size, 'bytes')
     return response.data;
   } catch (error) {
     // Enhanced error handling

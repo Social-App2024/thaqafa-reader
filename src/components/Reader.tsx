@@ -56,16 +56,21 @@ export const Reader = () => {
   // Fetch and manage EPUB blob URL
   useEffect(() => {
     const selectedBook = booksContext?.selectedBook
+    let isMounted = true
+    let currentBlobUrl: string | null = null
 
-    // Cleanup previous blob URL to prevent memory leaks
-    if (bookBlobUrl) {
-      URL.revokeObjectURL(bookBlobUrl)
-      setBookBlobUrl(null)
-    }
+    console.log('[Blob Effect] Selected book changed:', {
+      bookId: selectedBook?.bookId,
+      title: selectedBook?.title,
+      url: selectedBook?.url,
+      hasUrl: !!selectedBook?.url
+    })
 
     setBookLoadError(null)
+    setIsLoadingBook(false)
 
     if (!selectedBook) {
+      setBookBlobUrl(null)
       return
     }
 
@@ -76,26 +81,46 @@ export const Reader = () => {
     if (isPublicUrl) {
       console.log('Using public URL for demo book:', selectedBook.url)
       setBookBlobUrl(selectedBook.url)
+      setIsLoadingBook(false)
       return
     }
 
     // Book requires authenticated blob fetch
     if (!selectedBook.bookId) {
       setBookLoadError('Invalid book: missing bookId')
+      setBookBlobUrl(null)
+      setIsLoadingBook(false)
       return
     }
 
     const loadBookBlob = async () => {
+      if (!isMounted) return
+
       setIsLoadingBook(true)
       setBookLoadError(null)
+      setBookBlobUrl(null)
 
       try {
         console.log('Fetching protected EPUB for bookId:', selectedBook.bookId)
         const blob = await fetchBookContent(selectedBook.bookId)
+
+        if (!isMounted) {
+          // Component unmounted during fetch, don't update state
+          return
+        }
+
         const objectUrl = URL.createObjectURL(blob)
+        currentBlobUrl = objectUrl
+        console.log('[Blob Effect] About to set state:', {
+          objectUrl: objectUrl.substring(0, 50),
+          willSetIsLoadingBook: false
+        })
         setBookBlobUrl(objectUrl)
-        console.log('Book blob loaded successfully')
+        setIsLoadingBook(false)
+        console.log('[Blob Effect] Book blob loaded successfully for:', selectedBook.bookId)
       } catch (error: any) {
+        if (!isMounted) return
+
         console.error('Failed to load book:', error)
         setBookLoadError(error.message || 'Failed to load book')
 
@@ -105,7 +130,9 @@ export const Reader = () => {
           setBookBlobUrl(selectedBook.url)
         }
       } finally {
-        setIsLoadingBook(false)
+        if (isMounted) {
+          setIsLoadingBook(false)
+        }
       }
     }
 
@@ -113,8 +140,10 @@ export const Reader = () => {
 
     // Cleanup on unmount or book change
     return () => {
-      if (bookBlobUrl) {
-        URL.revokeObjectURL(bookBlobUrl)
+      isMounted = false
+      if (currentBlobUrl) {
+        console.log('Revoking blob URL:', currentBlobUrl)
+        URL.revokeObjectURL(currentBlobUrl)
       }
     }
   }, [booksContext?.selectedBook?.bookId])
@@ -211,6 +240,16 @@ export const Reader = () => {
   const bookUrl = bookBlobUrl || booksContext?.selectedBook?.url || DEMO_URL
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
   const bookAuthor = booksContext?.selectedBook?.author || 'Unknown Author'
+
+  console.log('[Reader Render]', {
+    isLoadingBook,
+    bookBlobUrl: bookBlobUrl?.substring(0, 50) + '...',
+    bookLoadError,
+    bookUrl: bookUrl?.substring(0, 50),
+    willShowLoading: isLoadingBook,
+    willShowError: !!(bookLoadError && !bookBlobUrl),
+    willShowReader: !isLoadingBook && !(bookLoadError && !bookBlobUrl)
+  })
 
   // Show loading state while fetching book
   if (isLoadingBook) {

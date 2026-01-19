@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useEffect } from "react";
+import { createContext, useState, useContext, useEffect, useMemo } from "react";
 import { ViewPurchasedBooks } from "../api/booksList";
 
 const BooksContext = createContext(undefined);
@@ -86,13 +86,15 @@ export const BooksProvider = ({ children }) => {
     fetchBooks();
   }, []);
 
+  const contextValue = useMemo(() => ({
+    books: books,
+    selectedBook: selectedBook,
+    setSelectedBook: setSelectedBook
+  }), [books, selectedBook]);
+
   return (
     <>
-      <BooksContext.Provider value={{
-        books: books,
-        selectedBook: selectedBook,
-        setSelectedBook: setSelectedBook
-      }}>
+      <BooksContext.Provider value={contextValue}>
         {children}
       </BooksContext.Provider>
     </>
