@@ -21,7 +21,7 @@ export const Reader = () => {
   const [highlightedText, setHighlightedText] = useState<string>('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pubsubRef = useRef(new PubSub());
-  const [bookBlobUrl, setBookBlobUrl] = useState<string | null>(null)
+  const [bookBlobUrl, setBookBlobUrl] = useState<string | ArrayBuffer | null>(null)
   const [isLoadingBook, setIsLoadingBook] = useState(false)
   const [bookLoadError, setBookLoadError] = useState<string | null>(null)
 
@@ -53,11 +53,10 @@ export const Reader = () => {
     pubsubRef.current.publish('closeContextMenu')
   }, [booksContext?.selectedBook?.url])
 
-  // Fetch and manage EPUB blob URL
+  // Fetch and manage EPUB content (ArrayBuffer or URL)
   useEffect(() => {
     const selectedBook = booksContext?.selectedBook
     let isMounted = true
-    let currentBlobUrl: string | null = null
 
     console.log('[Blob Effect] Selected book changed:', {
       bookId: selectedBook?.bookId,
@@ -79,7 +78,7 @@ export const Reader = () => {
                         selectedBook.url?.startsWith('http')
 
     if (isPublicUrl) {
-      console.log('Using public URL for demo book:', selectedBook.url)
+      console.log('[Blob Effect] Using public URL for demo book:', selectedBook.url)
       setBookBlobUrl(selectedBook.url)
       setIsLoadingBook(false)
       return
@@ -101,7 +100,7 @@ export const Reader = () => {
       setBookBlobUrl(null)
 
       try {
-        console.log('Fetching protected EPUB for bookId:', selectedBook.bookId)
+        console.log('[Blob Effect] Fetching protected EPUB for bookId:', selectedBook.bookId)
         const blob = await fetchBookContent(selectedBook.bookId)
 
         if (!isMounted) {
@@ -109,15 +108,34 @@ export const Reader = () => {
           return
         }
 
-        const objectUrl = URL.createObjectURL(blob)
-        currentBlobUrl = objectUrl
-        console.log('[Blob Effect] About to set state:', {
-          objectUrl: objectUrl.substring(0, 50),
-          willSetIsLoadingBook: false
+        // Convert blob to ArrayBuffer for EPUB.js (more reliable than blob URLs)
+        console.log('[Blob Effect] Converting blob to ArrayBuffer...')
+        const arrayBuffer = await blob.arrayBuffer()
+
+        console.log('[Blob Effect] ArrayBuffer created:', {
+          byteLength: arrayBuffer.byteLength,
+          bookId: selectedBook.bookId
         })
-        setBookBlobUrl(objectUrl)
+
+        // Validate EPUB structure (basic ZIP check)
+        try {
+          const view = new Uint8Array(arrayBuffer)
+          const isPKZip = view[0] === 0x50 && view[1] === 0x4B // PK signature
+
+          if (!isPKZip) {
+            console.error('[Blob Effect] File is not a valid ZIP/EPUB (missing PK signature)')
+            throw new Error('Invalid EPUB file format. The file does not appear to be a valid EPUB.')
+          }
+
+          console.log('[Blob Effect] ✅ EPUB ZIP signature validated')
+        } catch (validationError) {
+          console.error('[Blob Effect] EPUB validation failed:', validationError)
+          throw validationError
+        }
+
+        setBookBlobUrl(arrayBuffer)
         setIsLoadingBook(false)
-        console.log('[Blob Effect] Book blob loaded successfully for:', selectedBook.bookId)
+        console.log('[Blob Effect] ✅ Book loaded successfully as ArrayBuffer for:', selectedBook.bookId)
       } catch (error: any) {
         if (!isMounted) return
 
@@ -141,10 +159,7 @@ export const Reader = () => {
     // Cleanup on unmount or book change
     return () => {
       isMounted = false
-      if (currentBlobUrl) {
-        console.log('Revoking blob URL:', currentBlobUrl)
-        URL.revokeObjectURL(currentBlobUrl)
-      }
+      // No cleanup needed for ArrayBuffer (garbage collected automatically)
     }
   }, [booksContext?.selectedBook?.bookId])
 
@@ -243,9 +258,10 @@ export const Reader = () => {
 
   console.log('[Reader Render]', {
     isLoadingBook,
-    bookBlobUrl: bookBlobUrl?.substring(0, 50) + '...',
+    bookBlobUrlType: bookBlobUrl instanceof ArrayBuffer ? 'ArrayBuffer' : typeof bookBlobUrl,
+    bookBlobUrlSize: bookBlobUrl instanceof ArrayBuffer ? bookBlobUrl.byteLength : bookBlobUrl?.toString().substring(0, 50),
     bookLoadError,
-    bookUrl: bookUrl?.substring(0, 50),
+    bookUrlType: bookUrl instanceof ArrayBuffer ? 'ArrayBuffer' : typeof bookUrl,
     willShowLoading: isLoadingBook,
     willShowError: !!(bookLoadError && !bookBlobUrl),
     willShowReader: !isLoadingBook && !(bookLoadError && !bookBlobUrl)
@@ -324,6 +340,21 @@ export const Reader = () => {
         getRendition={(_rendition: Rendition) => {
           rendition.current = _rendition
           rendition.current.themes.fontSize(largeText ? '140%' : '100%')
+
+          // Add error handler for EPUB.js errors
+          rendition.current.on('displayError', (err: Error) => {
+            console.error('[EPUB.js] Display error:', err)
+            console.error('[EPUB.js] This usually means the EPUB has an empty or invalid spine.')
+            console.error('[EPUB.js] Check content.opf file structure.')
+            setBookLoadError(`Cannot display this EPUB: ${err.message}. The EPUB may have an invalid structure (empty spine or missing sections). Please validate the EPUB file with EPUBCheck.`)
+            setIsLoadingBook(false)
+          })
+
+          // Catch rendering errors
+          rendition.current.on('rendered', () => {
+            console.log('[EPUB.js] ✅ Page rendered successfully')
+          })
+
           // Apply theme immediately when rendition is ready
           applyTheme()
         }}
