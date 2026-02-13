@@ -1,31 +1,36 @@
 import { api } from "./client.js";
 
     async function shareQuote(data) {
-        // Convert data URL to File object
-        const file = dataURLtoFile(data.imageUrl, "quote.png");
+        try{
+            // Convert data URL to File object
+            const file = dataURLtoFile(data.imageUrl, "quote.png");
 
-        // Upload quote image to server using FormData
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("container", "tmp");
+            // Upload quote image to server using FormData
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("container", "tmp");
 
-        // Future: Upload to server and publish
-        const uploadResponse = await api.post("/assets/upload", formData);
-        console.log("file uploaded");
+            // Future: Upload to server and publish
+            const uploadResponse = await api.post("/assets/upload", formData);
+            console.log("file uploaded");
 
-        const url = uploadResponse.data?.url || uploadResponse.data;
-        console.log('[ShareQuote] Extracted URL:', url);
-        if (!url) {
-            throw new Error('Upload succeeded but no URL returned from server');
+            const url = uploadResponse.data?.url || uploadResponse.data;
+            console.log('[ShareQuote] Extracted URL:', url);
+            if (!url) {
+                throw new Error('Upload succeeded but no URL returned from server');
+            }
+
+            const publishResponse = await api.post("/posts/publish",{
+                profileId:"66b7a5025cf5d67e2eeaa110",
+                category:"photo",
+                imagesUrls:[url],
+                tags: ["book","quote"]
+            });
+            console.log("post published");
+        }catch(error)
+        {
+            throw error;
         }
-
-        const publishResponse = await api.post("/posts/publish",{
-            profileId:"66b7a5025cf5d67e2eeaa110",
-            category:"photo",
-            imagesUrls:[url],
-            tags: ["book","quote"]
-        });
-        console.log("post published");
     }
 
 function dataURLtoFile(dataUrl, filename) {
