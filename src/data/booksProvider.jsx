@@ -65,7 +65,7 @@ export const BooksProvider = ({ children }) => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const fetchedBooks = await ViewPurchasedBooks('66b7a5025cf5d67e2eeaa1fb');
+        const fetchedBooks = await ViewPurchasedBooks();
         if (fetchedBooks && Array.isArray(fetchedBooks) && fetchedBooks.length > 0) {
           setBooks(fetchedBooks);
         } else {

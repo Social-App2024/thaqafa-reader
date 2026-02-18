@@ -13,7 +13,7 @@ export async function fetchBookContent(bookId) {
 
   try {
     console.log('[BookContent API] Starting fetch for bookId:', bookId)
-    const response = await api.get(`/reader/content/${bookId}?userId=66b7a5025cf5d67e2eeaa1fb`, {
+    const response = await api.get(`/reader/content/${bookId}`, {
       responseType: 'blob',  // Critical for binary data
       timeout: 60000,        // 60 seconds for large EPUBs
     });
