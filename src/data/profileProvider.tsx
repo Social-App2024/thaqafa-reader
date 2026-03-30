@@ -41,7 +41,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(true)
         setError(null)
 
-        const userProfile = await fetchUserProfile()
+        const userProfile = await fetchUserProfile() as UserProfile
 
         console.log('[Profile] User profile loaded:', userProfile.id)
         setProfile(userProfile)
