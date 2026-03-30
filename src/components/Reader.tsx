@@ -8,6 +8,7 @@ import ReaderWrapper from './ReaderWrapper'
 import { useBooks } from '../data/booksProvider'
 import { useDarkMode } from '../data/darkModeProvider'
 import { useReadingPosition } from '../data/readingPositionProvider'
+import { useProfile } from '../data/profileProvider'
 import { ReactReaderStyle } from '../../lib/ReactReader/style'
 import { PubSub } from "../util/pubSub";
 import { ShareContextMenu } from './ShareContextMenu'
@@ -16,6 +17,7 @@ import { fetchBookContent } from '../api/bookContent'
 export const Reader = () => {
   const booksContext = useBooks() as any
   const { isDarkMode } = useDarkMode()
+  const { userId } = useProfile()
   const { getPosition, savePosition } = useReadingPosition()
   const [largeText, setLargeText] = useState(false)
   const rendition = useRef<Rendition | undefined>(undefined)
@@ -60,9 +62,9 @@ export const Reader = () => {
     }
 
     if (bookId) {
-      const savedPosition = getPosition(bookId)
+      const savedPosition = getPosition(bookId, userId)
       if (savedPosition) {
-        console.log('[Reader] Restoring position:', bookId, savedPosition.location)
+        console.log('[Reader] Restoring position:', bookId, userId, savedPosition.location)
         setLocation(savedPosition.location)
       } else {
         console.log('[Reader] No saved position, starting from beginning')
@@ -290,7 +292,7 @@ export const Reader = () => {
 
     // Save after 1 second of no changes
     saveTimerRef.current = window.setTimeout(() => {
-      console.log('[Reader] Saving position:', bookId, loc)
+      console.log('[Reader] Saving position:', bookId, userId, loc)
 
       // Extract page information from rendition
       const metadata: any = { location: loc }
@@ -300,9 +302,9 @@ export const Reader = () => {
         metadata.totalPages = rendition.current.location.start.displayed.total
       }
 
-      savePosition(bookId, metadata)
+      savePosition(bookId, userId, metadata)
     }, 1000)
-  }, [booksContext?.selectedBook?.bookId, savePosition])
+  }, [booksContext?.selectedBook?.bookId, userId, savePosition])
 
   // Cleanup timer on unmount
   useEffect(() => {
