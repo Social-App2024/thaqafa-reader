@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { ReactReader } from '../../lib/index'
 import type { Contents, Rendition } from 'epubjs'
 
@@ -7,6 +7,7 @@ import { Example } from '../components/Example'
 import ReaderWrapper from './ReaderWrapper'
 import { useBooks } from '../data/booksProvider'
 import { useDarkMode } from '../data/darkModeProvider'
+import { useReadingPosition } from '../data/readingPositionProvider'
 import { ReactReaderStyle } from '../../lib/ReactReader/style'
 import { PubSub } from "../util/pubSub";
 import { ShareContextMenu } from './ShareContextMenu'
@@ -15,12 +16,14 @@ import { fetchBookContent } from '../api/bookContent'
 export const Reader = () => {
   const booksContext = useBooks() as any
   const { isDarkMode } = useDarkMode()
+  const { getPosition, savePosition } = useReadingPosition()
   const [largeText, setLargeText] = useState(false)
   const rendition = useRef<Rendition | undefined>(undefined)
   const [location, setLocation] = useState<string | number>(0)
   const [highlightedText, setHighlightedText] = useState<string>('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pubsubRef = useRef(new PubSub());
+  const saveTimerRef = useRef<number | null>(null)
   const [bookBlobUrl, setBookBlobUrl] = useState<string | ArrayBuffer | null>(null)
   const [isLoadingBook, setIsLoadingBook] = useState(false)
   const [bookLoadError, setBookLoadError] = useState<string | null>(null)
@@ -46,12 +49,32 @@ export const Reader = () => {
     applyTheme()
   }, [isDarkMode])
 
-  // Reset location when book changes
+  // Restore saved location when book changes
   useEffect(() => {
-    setLocation(0)
+    const bookId = booksContext?.selectedBook?.bookId
+
+    // Clear any pending save timers
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+
+    if (bookId) {
+      const savedPosition = getPosition(bookId)
+      if (savedPosition) {
+        console.log('[Reader] Restoring position:', bookId, savedPosition.location)
+        setLocation(savedPosition.location)
+      } else {
+        console.log('[Reader] No saved position, starting from beginning')
+        setLocation(0)
+      }
+    } else {
+      setLocation(0)
+    }
+
     // Publish event to close context menu when book changes
     pubsubRef.current.publish('closeContextMenu')
-  }, [booksContext?.selectedBook?.url])
+  }, [booksContext?.selectedBook?.bookId, getPosition])
 
   // Fetch and manage EPUB content (ArrayBuffer or URL)
   useEffect(() => {
@@ -252,6 +275,43 @@ export const Reader = () => {
     }
   }, [rendition.current])
 
+  // Debounced save function for reading position
+  const debouncedSavePosition = useCallback((loc: string | number) => {
+    const bookId = booksContext?.selectedBook?.bookId
+
+    // Don't save initial position or missing bookId
+    if (!bookId || loc === 0) return
+
+    // Clear existing timer
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+    }
+
+    // Save after 1 second of no changes
+    saveTimerRef.current = window.setTimeout(() => {
+      console.log('[Reader] Saving position:', bookId, loc)
+
+      // Extract additional metadata from rendition if available
+      const metadata: any = { location: loc }
+
+      if (rendition.current?.location?.start) {
+        metadata.percentage = rendition.current.location.start.percentage
+        metadata.chapter = rendition.current.location.start.href
+      }
+
+      savePosition(bookId, metadata)
+    }, 1000)
+  }, [booksContext?.selectedBook?.bookId, savePosition])
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+    }
+  }, [])
+
   const bookUrl = bookBlobUrl || booksContext?.selectedBook?.url || DEMO_URL
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
   const bookAuthor = booksContext?.selectedBook?.author || 'Unknown Author'
@@ -336,7 +396,10 @@ export const Reader = () => {
         url={bookUrl}
         title={bookTitle}
         location={location}
-        locationChanged={(loc: string) => setLocation(loc)}
+        locationChanged={(loc: string) => {
+          setLocation(loc)
+          debouncedSavePosition(loc)
+        }}
         getRendition={(_rendition: Rendition) => {
           rendition.current = _rendition
           rendition.current.themes.fontSize(largeText ? '140%' : '100%')
