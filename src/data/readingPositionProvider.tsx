@@ -7,9 +7,9 @@ import {
 
 interface ReadingPosition {
   location: string | number
-  percentage?: number
+  currentPage?: number
+  totalPages?: number
   timestamp: number
-  chapter?: string
   syncStatus?: 'synced' | 'pending' | 'failed'
 }
 

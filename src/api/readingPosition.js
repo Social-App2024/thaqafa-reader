@@ -1,18 +1,18 @@
-import { axiosInstance } from './client'
+import { api } from './client'
 
 /**
  * Save reading position for a book
  * @param {string} bookId - The book ID
- * @param {Object} position - Position object with location, percentage, chapter, timestamp
+ * @param {Object} position - Position object with location, currentPage, totalPages, timestamp
  * @returns {Promise<Object>} - Response data from server
  */
 export const saveReadingPosition = async (bookId, position) => {
   try {
-    const response = await axiosInstance.post('/reader/reading-position', {
+    const response = await api.post('/reader/reading-position', {
       bookId,
       location: position.location,
-      percentage: position.percentage,
-      chapter: position.chapter,
+      currentPage: position.currentPage,
+      totalPages: position.totalPages,
       timestamp: position.timestamp
     })
     return response.data
@@ -29,7 +29,7 @@ export const saveReadingPosition = async (bookId, position) => {
  */
 export const getReadingPosition = async (bookId) => {
   try {
-    const response = await axiosInstance.get(`/reader/reading-position/${bookId}`)
+    const response = await api.get(`/reader/reading-position/${bookId}`)
     return response.data
   } catch (error) {
     if (error.response?.status === 404) {
@@ -46,7 +46,7 @@ export const getReadingPosition = async (bookId) => {
  */
 export const getAllReadingPositions = async () => {
   try {
-    const response = await axiosInstance.get('/reader/reading-positions')
+    const response = await api.get('/reader/reading-positions')
     return response.data
   } catch (error) {
     console.error('[API] Failed to fetch reading positions:', error)
@@ -61,7 +61,7 @@ export const getAllReadingPositions = async () => {
  */
 export const clearReadingPosition = async (bookId) => {
   try {
-    await axiosInstance.delete(`/reader/reading-position/${bookId}`)
+    await api.delete(`/reader/reading-position/${bookId}`)
   } catch (error) {
     console.error('[API] Failed to clear reading position:', error)
     throw error

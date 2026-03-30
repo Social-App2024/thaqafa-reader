@@ -291,12 +291,12 @@ export const Reader = () => {
     saveTimerRef.current = window.setTimeout(() => {
       console.log('[Reader] Saving position:', bookId, loc)
 
-      // Extract additional metadata from rendition if available
+      // Extract page information from rendition
       const metadata: any = { location: loc }
 
-      if (rendition.current?.location?.start) {
-        metadata.percentage = rendition.current.location.start.percentage
-        metadata.chapter = rendition.current.location.start.href
+      if (rendition.current?.location?.start?.displayed) {
+        metadata.currentPage = rendition.current.location.start.displayed.page
+        metadata.totalPages = rendition.current.location.start.displayed.total
       }
 
       savePosition(bookId, metadata)
