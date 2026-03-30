@@ -49,7 +49,7 @@ export const Reader = () => {
     applyTheme()
   }, [isDarkMode])
 
-  // Restore saved location when book changes
+  // Restore saved location when book changes (ONLY when bookId changes, not when positions update)
   useEffect(() => {
     const bookId = booksContext?.selectedBook?.bookId
 
@@ -74,7 +74,8 @@ export const Reader = () => {
 
     // Publish event to close context menu when book changes
     pubsubRef.current.publish('closeContextMenu')
-  }, [booksContext?.selectedBook?.bookId, getPosition])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booksContext?.selectedBook?.bookId])
 
   // Fetch and manage EPUB content (ArrayBuffer or URL)
   useEffect(() => {
