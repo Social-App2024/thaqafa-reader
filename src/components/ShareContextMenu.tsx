@@ -9,6 +9,7 @@ interface ShareContextMenuProps {
 export const ShareContextMenu = ({ pubsub }: ShareContextMenuProps) => {
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string; bookTitle: string; bookAuthor: string } | null>(null)
     const [shareDialog, setShareDialog] = useState<{ imageUrl: string; text: string } | null>(null)
+    const [error, setError] = useState<string | null>(null)
 
     const bookTitle = contextMenu?.bookTitle || '';
     const bookAuthor = contextMenu?.bookAuthor || '';
@@ -130,11 +131,12 @@ export const ShareContextMenu = ({ pubsub }: ShareContextMenuProps) => {
         // Generate share image
         const imageUrl = generateShareImage(contextMenu.text, bookTitle, bookAuthor)
 
-        // Show dialog with image
+        // Show dialog with image and clear any previous errors
         setShareDialog({
             imageUrl,
             text: contextMenu.text
         })
+        setError(null)
         }
 
         // Close context menu after opening share dialog
@@ -191,22 +193,35 @@ export const ShareContextMenu = ({ pubsub }: ShareContextMenuProps) => {
                 />
                 </div>
 
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-between items-center">
+                {error && (
+                    <div className="text-red-600 text-sm">
+                        {error}
+                    </div>
+                )}
+                <div className="flex gap-2 ml-auto">
                 <button
                     onClick={async () => {
-                    // Execute share command using Command pattern with Factory
-                    await shareQuote({
-                        imageUrl: shareDialog.imageUrl,
-                        text: shareDialog.text,
-                        bookTitle: bookTitle,
-                        bookAuthor: bookAuthor
-                    });
+                    try {
+                        // Clear any previous errors
+                        setError(null);
 
-                    // Original download logic (kept for reference)
-                    // const link = document.createElement('a')
-                    // link.download = 'quote.png'
-                    // link.href = shareDialog.imageUrl
-                    // link.click()
+                        // Execute share command using Command pattern with Factory
+                        await shareQuote({
+                            imageUrl: shareDialog.imageUrl,
+                            text: shareDialog.text,
+                            bookTitle: bookTitle,
+                            bookAuthor: bookAuthor
+                        });
+
+                        // Original download logic (kept for reference)
+                        // const link = document.createElement('a')
+                        // link.download = 'quote.png'
+                        // link.href = shareDialog.imageUrl
+                        // link.click()
+                    } catch (err) {
+                        setError('An error occurred');
+                    }
                     }}
                     className="px-3 py-1.5 text-sm bg-black text-white rounded hover:bg-gray-700"
                 >
@@ -218,6 +233,7 @@ export const ShareContextMenu = ({ pubsub }: ShareContextMenuProps) => {
                 >
                     Close
                 </button>
+                </div>
                 </div>
             </div>
             </div>
