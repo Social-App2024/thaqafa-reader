@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, useMemo, type ReactNode
 import { fetchUserProfile } from '../api/userProfile'
 
 // Fallback userId for offline mode or when API fails
-const OFFLINE_USER_ID = '66b7a5025cf5d67e2eeaa110'
+const OFFLINE_USER_ID = '66b7a5025cf5d67e2eeaa1fb'
 
 interface UserProfile {
   id: string

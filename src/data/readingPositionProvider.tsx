@@ -103,7 +103,7 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
       // Sync each pending position
       const syncPromises = pending.map(async ([bookId, position]) => {
         try {
-          await saveReadingPosition(bookId, userId, position)
+          await saveReadingPosition(bookId, position)
 
           // Mark as synced
           setAllPositions(prev => ({
@@ -173,7 +173,7 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
     const initialSync = async () => {
       try {
         console.log('[Sync] Starting initial sync for user:', userId)
-        const backendPositions = await getAllReadingPositions(userId)
+        const backendPositions = await getAllReadingPositions()
 
         if (!backendPositions || Object.keys(backendPositions).length === 0) {
           console.log('[Sync] No backend positions found for user:', userId)

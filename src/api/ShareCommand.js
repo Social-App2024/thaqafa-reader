@@ -21,7 +21,7 @@ import { api } from "./client.js";
             }
 
             const publishResponse = await api.post("/posts/publish",{
-                profileId:"66b7a5025cf5d67e2eeaa110",
+                // profileId:"66b7a5025cf5d67e2eeaa110",
                 category:"photo",
                 imagesUrls:[url],
                 tags: ["book","quote"]
