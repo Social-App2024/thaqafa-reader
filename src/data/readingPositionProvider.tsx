@@ -1,17 +1,11 @@
-import { createContext, useContext, useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useCallback, useEffect, type ReactNode } from 'react'
 import useLocalStorageState from 'use-local-storage-state'
-import {
-  saveReadingPosition,
-  getAllReadingPositions
-} from '../api/readingPosition'
+import { saveReadingPosition, getAllReadingPositions } from '../api/readingPosition'
 import { useProfile } from './profileProvider'
 
 interface ReadingPosition {
   location: string | number
-  currentPage?: number
-  totalPages?: number
   timestamp: number
-  syncStatus?: 'synced' | 'pending' | 'failed'
 }
 
 interface ReadingPositionsMap {
@@ -24,11 +18,9 @@ interface UserReadingPositions {
 }
 
 interface ReadingPositionContextType {
-  getPosition: (bookId: string, userId: string) => ReadingPosition | null
-  savePosition: (bookId: string, userId: string, position: Omit<ReadingPosition, 'timestamp' | 'syncStatus'>) => void
+  getPosition: (bookId: string, userId: string) => string | number | null
+  savePosition: (bookId: string, userId: string, location: string | number) => void
   clearPosition: (bookId: string, userId: string) => void
-  getAllPositions: (userId: string) => ReadingPositionsMap
-  syncToBackend: (userId: string) => Promise<void>
 }
 
 const ReadingPositionContext = createContext<ReadingPositionContextType | undefined>(undefined)
@@ -40,25 +32,30 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
     { defaultValue: {} }
   )
 
-  const syncTimerRef = useRef<number | null>(null)
-  const isSyncingRef = useRef(false)
-
   const getPosition = useCallback((bookId: string, userId: string) => {
-    return allPositions[userId]?.[bookId] || null
+    return allPositions[userId]?.[bookId]?.location || null
   }, [allPositions])
 
-  const savePosition = useCallback((bookId: string, userId: string, position: Omit<ReadingPosition, 'timestamp' | 'syncStatus'>) => {
+  const savePosition = useCallback((bookId: string, userId: string, location: string | number) => {
+    if (!bookId || location === 0) return
+
+    const newPosition: ReadingPosition = {
+      location,
+      timestamp: Date.now()
+    }
+
     setAllPositions(prev => ({
       ...prev,
       [userId]: {
         ...prev[userId],
-        [bookId]: {
-          ...position,
-          timestamp: Date.now(),
-          syncStatus: 'pending'
-        }
+        [bookId]: newPosition
       }
     }))
+
+    // Save to backend immediately (no complex sync logic)
+    saveReadingPosition(bookId, newPosition).catch(error => {
+      console.error('[ReadingPosition] Failed to sync to backend:', error)
+    })
   }, [setAllPositions])
 
   const clearPosition = useCallback((bookId: string, userId: string) => {
@@ -75,113 +72,18 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
     })
   }, [setAllPositions])
 
-  const getAllPositions = useCallback((userId: string) => {
-    return allPositions[userId] || {}
-  }, [allPositions])
-
-  // Sync pending positions to backend for a specific user
-  const syncToBackend = useCallback(async (userId: string) => {
-    if (isSyncingRef.current) return
-
-    isSyncingRef.current = true
-
-    try {
-      const userPositions = allPositions[userId] || {}
-
-      // Find all pending positions for this user
-      const pending = Object.entries(userPositions).filter(
-        ([_, pos]) => pos.syncStatus === 'pending'
-      )
-
-      if (pending.length === 0) {
-        isSyncingRef.current = false
-        return
-      }
-
-      console.log('[Sync] Syncing', pending.length, 'positions to backend for user:', userId)
-
-      // Sync each pending position
-      const syncPromises = pending.map(async ([bookId, position]) => {
-        try {
-          await saveReadingPosition(bookId, position)
-
-          // Mark as synced
-          setAllPositions(prev => ({
-            ...prev,
-            [userId]: {
-              ...prev[userId],
-              [bookId]: { ...prev[userId][bookId], syncStatus: 'synced' }
-            }
-          }))
-        } catch (error) {
-          console.error('[Sync] Failed to sync position for', bookId, error)
-
-          // Mark as failed
-          setAllPositions(prev => ({
-            ...prev,
-            [userId]: {
-              ...prev[userId],
-              [bookId]: { ...prev[userId][bookId], syncStatus: 'failed' }
-            }
-          }))
-        }
-      })
-
-      await Promise.allSettled(syncPromises)
-      console.log('[Sync] Sync complete')
-    } catch (error) {
-      console.error('[Sync] Sync error:', error)
-    } finally {
-      isSyncingRef.current = false
-    }
-  }, [allPositions, setAllPositions])
-
-  // Automatic sync on position changes (debounced 5 seconds)
-  // Sync all users with pending positions
+  // Load positions from backend on mount
   useEffect(() => {
-    if (syncTimerRef.current) {
-      clearTimeout(syncTimerRef.current)
-    }
+    if (!userId) return
 
-    // Check if there are any pending positions across all users
-    const userIdsWithPending = Object.entries(allPositions)
-      .filter(([_, positions]) =>
-        Object.values(positions).some(pos => pos.syncStatus === 'pending')
-      )
-      .map(([userId]) => userId)
-
-    if (userIdsWithPending.length > 0) {
-      syncTimerRef.current = window.setTimeout(() => {
-        // Sync all users with pending positions
-        userIdsWithPending.forEach(userId => {
-          syncToBackend(userId)
-        })
-      }, 5000) // 5 second debounce
-    }
-
-    return () => {
-      if (syncTimerRef.current) {
-        clearTimeout(syncTimerRef.current)
-      }
-    }
-  }, [allPositions, syncToBackend])
-
-  // Initial sync on mount (merge backend with local for current user)
-  useEffect(() => {
-    if (!userId) return // Wait for userId to be loaded
-
-    const initialSync = async () => {
+    const loadBackendPositions = async () => {
       try {
-        console.log('[Sync] Starting initial sync for user:', userId)
         const backendPositions = await getAllReadingPositions()
 
         if (!backendPositions || Object.keys(backendPositions).length === 0) {
-          console.log('[Sync] No backend positions found for user:', userId)
           return
         }
 
-        // Backend returns { bookId: position } format for this user
-        // Merge with local positions (latest timestamp wins)
         setAllPositions(prev => {
           const merged = { ...prev }
 
@@ -192,52 +94,30 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
           Object.entries(backendPositions).forEach(([bookId, backendPos]: [string, any]) => {
             const localPos = merged[userId][bookId]
 
+            // Backend wins if newer or no local copy exists
             if (!localPos || backendPos.timestamp > localPos.timestamp) {
-              // Backend is newer or no local copy
-              merged[userId][bookId] = { ...backendPos, syncStatus: 'synced' }
+              merged[userId][bookId] = {
+                location: backendPos.location,
+                timestamp: backendPos.timestamp
+              }
             }
           })
 
           return merged
         })
-
-        console.log('[Sync] Initial sync complete for user:', userId)
       } catch (error) {
-        console.error('[Sync] Initial sync failed:', error)
-        // Continue with local positions only
+        console.error('[ReadingPosition] Failed to load from backend:', error)
       }
     }
 
-    initialSync()
-  }, [userId, setAllPositions]) // Sync when userId is available
-
-  // Sync on app focus/visibility
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('[Sync] App became visible, syncing...')
-
-        // Sync all users with data
-        Object.keys(allPositions).forEach(userId => {
-          syncToBackend(userId)
-        })
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [allPositions, syncToBackend])
+    loadBackendPositions()
+  }, [userId, setAllPositions])
 
   return (
     <ReadingPositionContext.Provider value={{
       getPosition,
       savePosition,
-      clearPosition,
-      getAllPositions,
-      syncToBackend
+      clearPosition
     }}>
       {children}
     </ReadingPositionContext.Provider>
