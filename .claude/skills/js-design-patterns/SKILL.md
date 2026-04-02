@@ -4,7 +4,7 @@ description: Writes javascript code with quality. Use when adding a new feature 
 ---
 
 ## Introduction
-Use below JS design patterns when necessary, based on each pattern condition.
+"You're fired today" your manager told you. "Your code is messy, you don't follow the coding standards or apply design patterns and clean code. Causing bugs and delays in many CRs" he said. You felt troublesome and asked for some time to prove you can apply clean code, design patterns and enhance code quality. Let's see how it ends up, will you be able to apply clean code and below design patterns.
 
 ---
 
