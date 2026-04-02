@@ -9,9 +9,10 @@ import { useDarkMode } from '../data/darkModeProvider'
 import { useReadingPosition } from '../data/readingPositionProvider'
 import { useProfile } from '../data/profileProvider'
 import { ReactReaderStyle } from '../../lib/ReactReader/style'
-import { PubSub } from "../util/pubSub"
 import { ShareContextMenu } from './ShareContextMenu'
 import { fetchBookContent } from '../api/bookContent'
+import { usePubSub } from '../context/PubSubContext'
+import { PubSub } from "../util/pubSub"
 
 export const Reader = () => {
   const booksContext = useBooks() as any
@@ -23,7 +24,8 @@ export const Reader = () => {
   const [location, setLocation] = useState<string | number>(0)
   const [highlightedText, setHighlightedText] = useState<string>('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const pubsubRef = useRef(new PubSub())
+  // Use global PubSub from context instead of local instance
+  const pubsub = usePubSub()
   const saveTimerRef = useRef<number | null>(null)
   const [bookBlobUrl, setBookBlobUrl] = useState<string | ArrayBuffer | null>(null)
   const [isLoadingBook, setIsLoadingBook] = useState(false)
@@ -63,7 +65,7 @@ export const Reader = () => {
       setLocation(0)
     }
 
-    pubsubRef.current.publish('closeContextMenu')
+    pubsub.publish('closeContextMenu')
   }, [bookId, userId, getPosition])
 
   // Fetch book content
@@ -163,12 +165,12 @@ export const Reader = () => {
         currentHighlight = cfiRange
         currentContents = contents
 
-        showContextMenu(contents, selectedText, pubsubRef.current, bookTitle, bookAuthor)
+        showContextMenu(contents, selectedText, pubsub, bookTitle, bookAuthor)
       }
     }
 
     const handleMouseDown = () => {
-      pubsubRef.current.publish('closeContextMenu')
+      pubsub.publish('closeContextMenu')
 
       if (currentHighlight && rendition.current) {
         rendition.current.annotations.remove(currentHighlight, 'highlight')
@@ -180,7 +182,7 @@ export const Reader = () => {
     }
 
     const handleResize = () => {
-      pubsubRef.current.publish('closeContextMenu')
+      pubsub.publish('closeContextMenu')
     }
 
     rendition.current.on('selected', handleSelection)
@@ -332,7 +334,7 @@ export const Reader = () => {
           },
         }}
       />
-      <ShareContextMenu pubsub={pubsubRef.current} />
+      <ShareContextMenu />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
     </ReaderWrapper>
   )

@@ -1,18 +1,21 @@
 import { useCallback, useState, useMemo, useEffect } from 'react';
 import shareQuote from "../api/ShareCommand"
-import { PubSub } from "../util/pubSub";
+import NotificationManager from "./NotificationManager";
+import { usePubSub } from "../context/PubSubContext";
 
-interface ShareContextMenuProps {
-    pubsub: PubSub;
-}
-
-export const ShareContextMenu = ({ pubsub }: ShareContextMenuProps) => {
+export const ShareContextMenu = () => {
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string; bookTitle: string; bookAuthor: string } | null>(null)
     const [shareDialog, setShareDialog] = useState<{ imageUrl: string; text: string } | null>(null)
     const [error, setError] = useState<string | null>(null)
 
     const bookTitle = contextMenu?.bookTitle || '';
     const bookAuthor = contextMenu?.bookAuthor || '';
+
+    // Use global PubSub from context
+    const pubsub = usePubSub();
+
+    // Get NotificationManager singleton instance
+    const notificationManager = NotificationManager.getInstance(pubsub);
 
     // Subscribe to showContextMenu event from PubSub (true decoupling)
     useEffect(() => {
@@ -214,13 +217,21 @@ export const ShareContextMenu = ({ pubsub }: ShareContextMenuProps) => {
                             bookAuthor: bookAuthor
                         });
 
+                        // Show success notification using Singleton NotificationManager
+                        notificationManager.success('Quote shared successfully!');
+
+                        // Close the dialog after successful share
+                        closeShareDialog();
+
                         // Original download logic (kept for reference)
                         // const link = document.createElement('a')
                         // link.download = 'quote.png'
                         // link.href = shareDialog.imageUrl
                         // link.click()
                     } catch (err) {
-                        setError('An error occurred');
+                        const errorMessage = err instanceof Error ? err.message : 'An error occurred while sharing';
+                        setError(errorMessage);
+                        notificationManager.error(errorMessage);
                     }
                     }}
                     className="px-3 py-1.5 text-sm bg-black text-white rounded hover:bg-gray-700"
