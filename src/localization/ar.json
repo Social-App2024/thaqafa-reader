@@ -1,0 +1,22 @@
+{
+  "navbar": {
+    "home": "A",
+    "discover": "B",
+    "people": "C",
+    "selection": "Selection",
+    "language": {
+      "english": "الإنجليزية",
+      "arabic": "العربية"
+    }
+  },
+  "share": {
+    "title": "مشاركة اقتباس",
+    "button": "شارك",
+    "close": "إغلاق",
+    "success": "تمت مشاركة الاقتباس",
+    "error": "خطأ أثناء المشاركة"
+  },
+  "common": {
+    "darkMode": "الوضع المظلم"
+  }
+}

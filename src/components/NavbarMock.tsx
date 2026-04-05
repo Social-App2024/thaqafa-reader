@@ -1,16 +1,23 @@
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useDarkMode } from '../data/darkModeProvider'
+import { useTranslation } from 'react-i18next'
 
 const LanguageButton = ({
   children,
-  name,
+  languageCode,
 }: {
   children: ReactNode
-  name: string
+  languageCode: string
 }) => {
+  const { i18n } = useTranslation()
+
   function changeLanguage() {
-    console.log(`language changed to: ${name}`)
+    console.log('[LanguageButton] Changing language to:', languageCode)
+    i18n.changeLanguage(languageCode).then(() => {
+      console.log('[LanguageButton] Language changed successfully to:', i18n.language)
+      console.log('[LanguageButton] Current dir attribute:', document.documentElement.dir)
+    })
   }
 
   return (
@@ -47,6 +54,7 @@ const NavbarCenterItem = ({
 export default function NavBarMock() {
   const profile: { id: number; name: string } = { id: 4, name: 'testing' }
   const { isDarkMode, toggleDarkMode } = useDarkMode()
+  const { t } = useTranslation()
 
   return (
     <>
@@ -59,20 +67,20 @@ export default function NavBarMock() {
           Thaqafa☀️
         </Link>
         <div className="hidden md:flex gap-x-6 px-10 font-space items-center">
-          <NavbarCenterItem link={'/'}> A </NavbarCenterItem>|
-          <NavbarCenterItem link={'/discover'}> B </NavbarCenterItem>|
-          <NavbarCenterItem link={'/people'}> C </NavbarCenterItem>|
-          <NavbarCenterItem link={'/selection'}> Selection </NavbarCenterItem>
+          <NavbarCenterItem link={'/'}> {t('navbar.home')} </NavbarCenterItem>|
+          <NavbarCenterItem link={'/discover'}> {t('navbar.discover')} </NavbarCenterItem>|
+          <NavbarCenterItem link={'/people'}> {t('navbar.people')} </NavbarCenterItem>|
+          <NavbarCenterItem link={'/selection'}> {t('navbar.selection')} </NavbarCenterItem>
         </div>
         <div className="flex items-center w-1/4 justify-end">
           <div className="hidden lg:flex px-10 font-space items-center justify-center ">
             {[
               { name: 'English', shorthand: 'EN', slug: 'en' },
               { name: 'Arabic', shorthand: 'AR', slug: 'ar' },
-            ].map(({ name, shorthand, slug }, idx, arr) => {
+            ].map(({ shorthand, slug }, idx, arr) => {
               return (
                 <div key={slug}>
-                  <LanguageButton name={name}>{shorthand}</LanguageButton>
+                  <LanguageButton languageCode={slug}>{shorthand}</LanguageButton>
                   {idx !== arr.length - 1 && <span className="mx-4">|</span>}
                 </div>
               )

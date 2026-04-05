@@ -1,0 +1,22 @@
+{
+  "navbar": {
+    "home": "A",
+    "discover": "B",
+    "people": "C",
+    "selection": "Selection",
+    "language": {
+      "english": "EN",
+      "arabic": "AR"
+    }
+  },
+  "share": {
+    "title": "Share Quote",
+    "button": "Share",
+    "close": "Close",
+    "success": "Quote shared successfully!",
+    "error": "An error occurred while sharing"
+  },
+  "common": {
+    "darkMode": "Dark Mode"
+  }
+}

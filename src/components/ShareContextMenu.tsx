@@ -1,7 +1,8 @@
-import { useCallback, useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import shareQuote from "../api/ShareCommand"
 import NotificationManager from "./NotificationManager";
 import { usePubSub } from "../context/PubSubContext";
+import { useTranslation } from 'react-i18next';
 
 export const ShareContextMenu = () => {
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string; bookTitle: string; bookAuthor: string } | null>(null)
@@ -17,9 +18,19 @@ export const ShareContextMenu = () => {
     // Get NotificationManager singleton instance
     const notificationManager = NotificationManager.getInstance(pubsub);
 
+    // Get translation function with fallback
+    const { t, i18n } = useTranslation();
+
+    // Debug: log current language
+    useEffect(() => {
+        console.log('[ShareContextMenu] Current language:', i18n.language);
+        console.log('[ShareContextMenu] Translation test:', t('share.button'));
+    }, [i18n.language, t]);
+
     // Subscribe to showContextMenu event from PubSub (true decoupling)
     useEffect(() => {
         const subscription = pubsub.subscribe('showContextMenu', (_topic: string, data: any) => {
+            console.log('[ShareContextMenu] Received showContextMenu event:', data);
             setContextMenu(data);
         });
 
@@ -165,7 +176,7 @@ export const ShareContextMenu = () => {
                 className="px-3 py-1 hover:bg-gray-300 w-full text-left text-sm"
                 onClick={handleShare}
             >
-                Share
+                {t('share.button')}
             </button>
             </div>
         )}
@@ -179,7 +190,7 @@ export const ShareContextMenu = () => {
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-bold text-gray-800">Share Quote</h2>
+                <h2 className="text-lg font-bold text-gray-800">{t('share.title')}</h2>
                 <button
                     onClick={closeShareDialog}
                     className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
@@ -218,7 +229,7 @@ export const ShareContextMenu = () => {
                         });
 
                         // Show success notification using Singleton NotificationManager
-                        notificationManager.success('Quote shared successfully!');
+                        notificationManager.success(t('share.success'));
 
                         // Close the dialog after successful share
                         closeShareDialog();
@@ -229,20 +240,20 @@ export const ShareContextMenu = () => {
                         // link.href = shareDialog.imageUrl
                         // link.click()
                     } catch (err) {
-                        const errorMessage = err instanceof Error ? err.message : 'An error occurred while sharing';
+                        const errorMessage = err instanceof Error ? err.message : t('share.error');
                         setError(errorMessage);
                         notificationManager.error(errorMessage);
                     }
                     }}
                     className="px-3 py-1.5 text-sm bg-black text-white rounded hover:bg-gray-700"
                 >
-                    Share
+                    {t('share.button')}
                 </button>
                 <button
                     onClick={closeShareDialog}
                     className="px-3 py-1.5 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
                 >
-                    Close
+                    {t('share.close')}
                 </button>
                 </div>
                 </div>

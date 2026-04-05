@@ -1,4 +1,5 @@
 import './index.css'
+import './i18n'
 
 import React, { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'

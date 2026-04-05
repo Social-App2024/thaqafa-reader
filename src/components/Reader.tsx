@@ -36,6 +36,14 @@ export const Reader = () => {
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
   const bookAuthor = booksContext?.selectedBook?.author || 'Unknown Author'
 
+  // Clear save timer helper function
+  const clearSaveTimer = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+  }, [])
+
   // Apply font size when changed
   useEffect(() => {
     rendition.current?.themes.fontSize(largeText ? '140%' : '100%')
@@ -66,7 +74,7 @@ export const Reader = () => {
     }
 
     pubsub.publish('closeContextMenu')
-  }, [bookId, userId, getPosition])
+  }, [bookId, userId, getPosition, pubsub, clearSaveTimer])
 
   // Fetch book content
   useEffect(() => {
@@ -137,76 +145,22 @@ export const Reader = () => {
     }
   }, [booksContext?.selectedBook?.bookId])
 
-  // Handle text selection and highlighting
+  // Handle window resize to close context menu
   useEffect(() => {
-    if (!rendition.current) return
-
-    let currentHighlight: string | null = null
-    let currentContents: Contents | null = null
-
-    const handleSelection = (cfiRange: string, contents: Contents) => {
-      if (currentHighlight) {
-        rendition.current?.annotations.remove(currentHighlight, 'highlight')
-      }
-
-      const selectedText = rendition.current?.getRange(cfiRange).toString()
-      if (selectedText) {
-        setHighlightedText(selectedText)
-
-        rendition.current?.annotations.add(
-          'highlight',
-          cfiRange,
-          {},
-          () => {},
-          'hl',
-          { fill: '#03b1fc', 'fill-opacity': '0.5', 'mix-blend-mode': 'multiply' }
-        )
-
-        currentHighlight = cfiRange
-        currentContents = contents
-
-        showContextMenu(contents, selectedText, pubsub, bookTitle, bookAuthor)
-      }
-    }
-
-    const handleMouseDown = () => {
-      pubsub.publish('closeContextMenu')
-
-      if (currentHighlight && rendition.current) {
-        rendition.current.annotations.remove(currentHighlight, 'highlight')
-        currentHighlight = null
-        setHighlightedText('')
-      }
-
-      currentContents?.window.getSelection()?.removeAllRanges()
-    }
-
     const handleResize = () => {
       pubsub.publish('closeContextMenu')
     }
 
-    rendition.current.on('selected', handleSelection)
-    rendition.current.on('mousedown', handleMouseDown)
     window.addEventListener('resize', handleResize)
-
     return () => {
-      rendition.current?.off('selected', handleSelection)
-      rendition.current?.off('mousedown', handleMouseDown)
       window.removeEventListener('resize', handleResize)
     }
-  }, [rendition.current, bookTitle, bookAuthor])
+  }, [pubsub])
 
   // Cleanup save timer on unmount
   useEffect(() => {
     return () => clearSaveTimer()
-  }, [])
-
-  const clearSaveTimer = () => {
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current)
-      saveTimerRef.current = null
-    }
-  }
+  }, [clearSaveTimer])
 
   const debouncedSavePosition = useCallback((loc: string | number) => {
     if (!bookId || !userId || loc === 0) return
@@ -216,7 +170,7 @@ export const Reader = () => {
     saveTimerRef.current = window.setTimeout(() => {
       savePosition(bookId, userId, loc)
     }, 1000)
-  }, [bookId, userId, savePosition])
+  }, [bookId, userId, savePosition, clearSaveTimer])
 
   const handleLocationChange = (loc: string) => {
     setLocation(loc)
@@ -229,6 +183,7 @@ export const Reader = () => {
 
     setupLocationGeneration(_rendition)
     setupErrorHandling(_rendition)
+    setupTextSelection(_rendition, pubsub, bookTitle, bookAuthor, setHighlightedText)
 
     // Apply theme immediately
     if (isDarkMode) {
@@ -347,33 +302,98 @@ function isValidEpub(arrayBuffer: ArrayBuffer): boolean {
   return view[0] === 0x50 && view[1] === 0x4B // PK signature
 }
 
-function showContextMenu(
-  contents: Contents,
-  selectedText: string,
+function setupTextSelection(
+  rendition: Rendition,
   pubsub: PubSub,
   bookTitle: string,
-  bookAuthor: string
+  bookAuthor: string,
+  setHighlightedText: (text: string) => void
 ) {
-  const selection = contents.window.getSelection()
-  if (!selection || selection.rangeCount === 0) return
+  let currentHighlight: string | null = null
+  let currentContents: Contents | null = null
 
-  const range = selection.getRangeAt(0)
-  const rangeRect = range.getBoundingClientRect()
+  const handleSelection = (cfiRange: string, contents: Contents) => {
+    if (currentHighlight) {
+      rendition.annotations.remove(currentHighlight, 'highlight')
+    }
 
-  const iframe = document.querySelector('iframe')
-  if (!iframe) return
+    const selectedText = rendition.getRange(cfiRange).toString()
+    setHighlightedText(selectedText)
 
-  const iframeRect = iframe.getBoundingClientRect()
+    rendition.annotations.add(
+      'highlight',
+      cfiRange,
+      {},
+      () => {},
+      'hl',
+      { fill: '#03b1fc', 'fill-opacity': '0.5', 'mix-blend-mode': 'multiply' }
+    )
 
-  pubsub.publish('showContextMenu', {
-    x: iframeRect.left + rangeRect.left + (rangeRect.width / 2),
-    y: iframeRect.top + rangeRect.bottom + 5,
-    text: selectedText,
-    bookTitle,
-    bookAuthor
-  })
+    currentHighlight = cfiRange
+    currentContents = contents
 
-  selection.removeAllRanges()
+    // Get the actual bounding rectangle of the selected text from the iframe content
+    const selection = contents.window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0)
+      const rangeRect = range.getBoundingClientRect()
+
+      console.log('[handleSelection] rangeRect from selection:', {
+        left: rangeRect.left,
+        right: rangeRect.right,
+        top: rangeRect.top,
+        bottom: rangeRect.bottom,
+        width: rangeRect.width,
+        height: rangeRect.height
+      })
+
+      // Get iframe position on the page
+      const iframe = document.querySelector('iframe')
+      if (iframe) {
+        const iframeRect = iframe.getBoundingClientRect()
+
+        console.log('[handleSelection] iframeRect:', {
+          left: iframeRect.left,
+          top: iframeRect.top,
+          width: iframeRect.width,
+          height: iframeRect.height
+        })
+
+        const x = iframeRect.left + rangeRect.left + (rangeRect.width / 2)
+        const y = iframeRect.top + rangeRect.bottom + 5
+
+        console.log('[handleSelection] Publishing position:', { x, y })
+
+        // Publish event to show context menu
+        pubsub.publish('showContextMenu', {
+          x,
+          y,
+          text: selectedText,
+          bookTitle,
+          bookAuthor
+        })
+      }
+    }
+
+    selection?.removeAllRanges()
+  }
+
+  const handleMouseDown = () => {
+    pubsub.publish('closeContextMenu')
+
+    if (currentHighlight) {
+      rendition.annotations.remove(currentHighlight, 'highlight')
+      currentHighlight = null
+      setHighlightedText('')
+    }
+
+    if (currentContents) {
+      currentContents.window.getSelection()?.removeAllRanges()
+    }
+  }
+
+  rendition.on('selected', handleSelection)
+  rendition.on('mousedown', handleMouseDown)
 }
 
 export default Reader
