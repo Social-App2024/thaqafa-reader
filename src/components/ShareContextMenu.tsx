@@ -213,7 +213,7 @@ export const ShareContextMenu = () => {
                         {error}
                     </div>
                 )}
-                <div className="flex gap-2 ml-auto">
+                <div className="flex gap-2 ms-auto">
                 <button
                     onClick={async () => {
                     try {
@@ -240,7 +240,9 @@ export const ShareContextMenu = () => {
                         // link.href = shareDialog.imageUrl
                         // link.click()
                     } catch (err) {
-                        const errorMessage = err instanceof Error ? err.message : t('share.error');
+                        // Always use localized error message
+                        const errorMessage = t('share.error');
+                        console.error('Share error:', err);
                         setError(errorMessage);
                         notificationManager.error(errorMessage);
                     }
