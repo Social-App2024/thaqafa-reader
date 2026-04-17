@@ -2,6 +2,7 @@ import { createContext, useState, useContext, useEffect, useMemo } from "react";
 import { ViewPurchasedBooks } from "../api/booksList";
 
 const BooksContext = createContext(undefined);
+const SELECTED_BOOK_KEY = "thaqafa_selected_book";
 
 // Fixed books list as fallback
 const fixedBooksList = [{
@@ -45,22 +46,30 @@ const fixedBooksList = [{
     tags: null
 }];
 
-const myBook = {
-    bookId: "2",
-    title: "Book 2",
-    url: "/files/book4.epub", 
-    frontCoverUrl: "/images/book4.jpg",
-    author: "Hofman", 
-    desc: "fiction",
-    isRTL: false,
-    tags: null
+const getStoredBook = () => {
+  try {
+    const stored = localStorage.getItem(SELECTED_BOOK_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveBookToStorage = (book) => {
+  try {
+    localStorage.setItem(SELECTED_BOOK_KEY, JSON.stringify(book));
+  } catch (error) {
+    console.warn('Failed to save book to localStorage:', error);
+  }
+};
+
+const getInitialBook = (booksList) => {
+  return getStoredBook() || booksList[0];
 };
 
 export const BooksProvider = ({ children }) => {
-
   const [books, setBooks] = useState(fixedBooksList);
-  const [selectedBook, setSelectedBook] = useState(myBook);
-  //const [cookies, setCookie] = useCookies(['profile_name', 'profile_photo']);
+  const [selectedBook, setSelectedBook] = useState(() => getInitialBook(fixedBooksList));
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -68,28 +77,38 @@ export const BooksProvider = ({ children }) => {
         const fetchedBooks = await ViewPurchasedBooks();
         if (fetchedBooks && Array.isArray(fetchedBooks) && fetchedBooks.length > 0) {
           setBooks(fetchedBooks);
+
+          const storedBook = getStoredBook();
+          const isStoredBookValid = storedBook && fetchedBooks.some(book => book.bookId === storedBook.bookId);
+
+          if (!isStoredBookValid) {
+            setSelectedBook(fetchedBooks[0]);
+          }
         } else {
           console.warn('API returned invalid data, using fixed books list');
         }
       } catch (error) {
-        // Handle authentication errors and other failures gracefully
         if (error.response?.status === 401) {
           console.warn('Authentication required. Using fixed books list for demo.');
           console.info('To authenticate: import { setAccessToken } from "./api/client" and call setAccessToken("your_token")');
         } else {
           console.error('Failed to fetch books:', error.message);
         }
-        // Keep the fixedBooksList as fallback (already set in initial state)
       }
     };
 
     fetchBooks();
   }, []);
 
+  const handleSetSelectedBook = (book) => {
+    setSelectedBook(book);
+    saveBookToStorage(book);
+  };
+
   const contextValue = useMemo(() => ({
-    books: books,
-    selectedBook: selectedBook,
-    setSelectedBook: setSelectedBook
+    books,
+    selectedBook,
+    setSelectedBook: handleSetSelectedBook
   }), [books, selectedBook]);
 
   return (
