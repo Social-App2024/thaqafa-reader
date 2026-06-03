@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ReactReader } from '../../lib/index'
 import type { Contents, Rendition } from 'epubjs'
 
@@ -14,17 +14,14 @@ import { fetchBookContent } from '../api/bookContent'
 import { usePubSub } from '../context/PubSubContext'
 import { PubSub } from "../util/pubSub"
 
-export const Reader = () => {
+export function Reader() {
   const booksContext = useBooks() as any
   const { isDarkMode } = useDarkMode()
   const { userId } = useProfile()
   const { getPosition, savePosition } = useReadingPosition()
-  const [largeText, setLargeText] = useState(false)
   const rendition = useRef<Rendition | undefined>(undefined)
   const [location, setLocation] = useState<string | number>(0)
-  const [highlightedText, setHighlightedText] = useState<string>('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  // Use global PubSub from context instead of local instance
   const pubsub = usePubSub()
   const saveTimerRef = useRef<number | null>(null)
   const [bookBlobUrl, setBookBlobUrl] = useState<string | ArrayBuffer | null>(null)
@@ -36,47 +33,24 @@ export const Reader = () => {
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
   const bookAuthor = booksContext?.selectedBook?.author || 'Unknown Author'
 
-  // Clear save timer helper function
-  const clearSaveTimer = useCallback(() => {
+  function clearSaveTimer() {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
       saveTimerRef.current = null
     }
-  }, [])
+  }
 
-  // Apply font size when changed
-  useEffect(() => {
-    rendition.current?.themes.fontSize(largeText ? '140%' : '100%')
-  }, [largeText])
-
-  // Apply dark mode theme
-  useEffect(() => {
-    if (!rendition.current) return
-
-    if (isDarkMode) {
-      rendition.current.themes.override('color', '#e5e5e5')
-      rendition.current.themes.override('background', '#000000')
+  function applyTheme(rendition: Rendition, isDark: boolean) {
+    if (isDark) {
+      rendition.themes.override('color', '#e5e5e5')
+      rendition.themes.override('background', '#000000')
     } else {
-      rendition.current.themes.override('color', '#000000')
-      rendition.current.themes.override('background', '#ffffff')
+      rendition.themes.override('color', '#000000')
+      rendition.themes.override('background', '#ffffff')
     }
-  }, [isDarkMode])
+  }
 
-  // Restore saved position when book changes
-  useEffect(() => {
-    clearSaveTimer()
-
-    if (bookId && userId) {
-      const savedLocation = getPosition(bookId, userId)
-      setLocation(savedLocation || 0)
-    } else {
-      setLocation(0)
-    }
-
-    pubsub.publish('closeContextMenu')
-  }, [bookId, userId, getPosition, pubsub, clearSaveTimer])
-
-  // Fetch book content
+  // Sync with external system: fetch book content from API
   useEffect(() => {
     const selectedBook = booksContext?.selectedBook
     let isMounted = true
@@ -102,7 +76,7 @@ export const Reader = () => {
       return
     }
 
-    const loadBookBlob = async () => {
+    async function loadBookBlob() {
       if (!isMounted) return
 
       setIsLoadingBook(true)
@@ -145,57 +119,61 @@ export const Reader = () => {
     }
   }, [booksContext?.selectedBook?.bookId])
 
-  // Handle window resize to close context menu
+  // Adjust state when book changes - restore saved position
   useEffect(() => {
-    const handleResize = () => {
+    clearSaveTimer()
+
+    const savedLocation = (bookId && userId) ? getPosition(bookId, userId) : null
+    setLocation(savedLocation || 0)
+
+    pubsub.publish('closeContextMenu')
+  }, [bookId, userId, getPosition, pubsub])
+
+  // Sync with external system: epub.js rendition theme
+  useEffect(() => {
+    if (rendition.current) {
+      applyTheme(rendition.current, isDarkMode)
+    }
+  }, [isDarkMode])
+
+  // Sync with external system: window resize event
+  useEffect(() => {
+    function handleResize() {
       pubsub.publish('closeContextMenu')
     }
 
     window.addEventListener('resize', handleResize)
+
     return () => {
       window.removeEventListener('resize', handleResize)
+      clearSaveTimer()
     }
   }, [pubsub])
 
-  // Cleanup save timer on unmount
-  useEffect(() => {
-    return () => clearSaveTimer()
-  }, [clearSaveTimer])
+  function handleLocationChange(loc: string) {
+    setLocation(loc)
 
-  const debouncedSavePosition = useCallback((loc: string | number) => {
-    if (!bookId || !userId || loc === 0) return
+    if (!bookId || !userId) return
 
     clearSaveTimer()
 
     saveTimerRef.current = window.setTimeout(() => {
       savePosition(bookId, userId, loc)
     }, 1000)
-  }, [bookId, userId, savePosition, clearSaveTimer])
-
-  const handleLocationChange = (loc: string) => {
-    setLocation(loc)
-    debouncedSavePosition(loc)
   }
 
-  const handleRenditionReady = (_rendition: Rendition) => {
+  function handleRenditionReady(_rendition: Rendition) {
     rendition.current = _rendition
-    rendition.current.themes.fontSize(largeText ? '140%' : '100%')
+
+    // Apply initial theme
+    applyTheme(_rendition, isDarkMode)
 
     setupLocationGeneration(_rendition)
     setupErrorHandling(_rendition)
-    setupTextSelection(_rendition, pubsub, bookTitle, bookAuthor, setHighlightedText)
-
-    // Apply theme immediately
-    if (isDarkMode) {
-      _rendition.themes.override('color', '#e5e5e5')
-      _rendition.themes.override('background', '#000000')
-    } else {
-      _rendition.themes.override('color', '#000000')
-      _rendition.themes.override('background', '#ffffff')
-    }
+    setupTextSelection(_rendition, pubsub, bookTitle, bookAuthor)
   }
 
-  const setupLocationGeneration = (rendition: Rendition) => {
+  function setupLocationGeneration(rendition: Rendition) {
     const book = rendition.book
     if (book && !book.locations?.length()) {
       book.locations.generate(150).then(() => {
@@ -206,7 +184,7 @@ export const Reader = () => {
     }
   }
 
-  const setupErrorHandling = (rendition: Rendition) => {
+  function setupErrorHandling(rendition: Rendition) {
     rendition.on('displayError', (err: Error) => {
       console.error('[EPUB.js] Display error:', err)
       setBookLoadError(`Cannot display this EPUB: ${err.message}`)
@@ -306,8 +284,7 @@ function setupTextSelection(
   rendition: Rendition,
   pubsub: PubSub,
   bookTitle: string,
-  bookAuthor: string,
-  setHighlightedText: (text: string) => void
+  bookAuthor: string
 ) {
   let currentHighlight: string | null = null
   let currentContents: Contents | null = null
@@ -318,7 +295,6 @@ function setupTextSelection(
     }
 
     const selectedText = rendition.getRange(cfiRange).toString()
-    setHighlightedText(selectedText)
 
     rendition.annotations.add(
       'highlight',
@@ -384,7 +360,6 @@ function setupTextSelection(
     if (currentHighlight) {
       rendition.annotations.remove(currentHighlight, 'highlight')
       currentHighlight = null
-      setHighlightedText('')
     }
 
     if (currentContents) {
