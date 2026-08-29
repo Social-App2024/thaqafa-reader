@@ -17,6 +17,7 @@
     "error": "An error occurred while sharing"
   },
   "common": {
-    "darkMode": "Dark Mode"
+    "darkMode": "Dark Mode",
+    "appName": "Thaqafa"
   }
 }

@@ -1,0 +1,4 @@
+Referring to thaqafa-ai-docbase, we’ve another frontend project thaqafa-reader,
+this is additional project to the main frontend project Thaqafa-Frontend, it's used for reading purchased/free epub books online, which are published to Thaqafa.
+it has some features like display book in dark/light mode, language switch, highlight epub text and share quote to Thaqafa as an image post.
+Please also explore more of thaqafa-reader codebase and technology stack then init the project context in local files CLAUDE.md and AGENTS.md to be defined inside the project thaqafa-reader.

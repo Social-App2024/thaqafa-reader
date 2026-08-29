@@ -58,13 +58,14 @@ export default function NavBarMock() {
 
   return (
     <>
-      <div className="flex w-full justify-between border-b-[1.5px] shadow-lg border-b-accent/60 items-center py-2.5">
-        {/* Logo at the left */}
-        <Link
-          to="/"
-          className="text-2xl lg:text-3xl font-poppins text-accent font-semibold px-10 w-1/4"
-        >
-          Thaqafa☀️
+      <div className="flex w-full justify-between bg-white border-b-[1.5px] shadow-lg border-b-accent/60 items-center py-2.5">
+        {/* Logo at the leading edge (left in LTR, right in RTL) */}
+        <Link to="/" className="px-10 w-1/4 flex items-center justify-start">
+          <img
+            src="/images/logo.png"
+            alt={t('common.appName')}
+            className="h-12 lg:h-16 w-auto max-w-none shrink-0"
+          />
         </Link>
         <div className="hidden md:flex gap-x-6 px-10 font-space items-center">
           <NavbarCenterItem link={'/'}> {t('navbar.home')} </NavbarCenterItem>|
