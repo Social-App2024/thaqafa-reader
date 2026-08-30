@@ -24,6 +24,7 @@ export function Reader() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pubsub = usePubSub()
   const saveTimerRef = useRef<number | null>(null)
+  const textSelectionCleanupRef = useRef<(() => void) | null>(null)
   const [bookBlobUrl, setBookBlobUrl] = useState<string | ArrayBuffer | null>(null)
   const [isLoadingBook, setIsLoadingBook] = useState(false)
   const [bookLoadError, setBookLoadError] = useState<string | null>(null)
@@ -150,6 +151,14 @@ export function Reader() {
     }
   }, [pubsub])
 
+  // Cleanup text-selection polling on unmount
+  useEffect(() => {
+    return () => {
+      textSelectionCleanupRef.current?.()
+      textSelectionCleanupRef.current = null
+    }
+  }, [])
+
   function handleLocationChange(loc: string) {
     setLocation(loc)
 
@@ -170,7 +179,8 @@ export function Reader() {
 
     setupLocationGeneration(_rendition)
     setupErrorHandling(_rendition)
-    setupTextSelection(_rendition, pubsub, bookTitle, bookAuthor)
+    textSelectionCleanupRef.current?.()
+    textSelectionCleanupRef.current = setupTextSelection(_rendition, pubsub, bookTitle, bookAuthor)
   }
 
   function setupLocationGeneration(rendition: Rendition) {
@@ -285,9 +295,17 @@ function setupTextSelection(
   pubsub: PubSub,
   bookTitle: string,
   bookAuthor: string
-) {
+): () => void {
   let currentHighlight: string | null = null
   let currentContents: Contents | null = null
+
+  // WebKit/Safari blocks every event-listener callback registered on the
+  // sandboxed epub iframe document (sandbox without 'allow-scripts'), so
+  // epub.js' 'selected' and 'mousedown' events never fire there — unlike
+  // Chrome/Firefox, which run listeners registered from the parent realm.
+  // DOM and Selection APIs still work cross-realm, so on affected browsers we
+  // poll the iframe selection from the parent context instead.
+  const listenersBlocked = sandboxedIframeListenersBlocked()
 
   const handleSelection = (cfiRange: string, contents: Contents) => {
     if (currentHighlight) {
@@ -351,7 +369,12 @@ function setupTextSelection(
       }
     }
 
-    selection?.removeAllRanges()
+    // When listeners are blocked (Safari) the selection must be kept: the
+    // polling below detects its collapse as the 'dismiss menu' signal,
+    // replacing the 'mousedown' relay that WebKit never delivers.
+    if (!listenersBlocked) {
+      selection?.removeAllRanges()
+    }
   }
 
   const handleMouseDown = () => {
@@ -369,6 +392,93 @@ function setupTextSelection(
 
   rendition.on('selected', handleSelection)
   rendition.on('mousedown', handleMouseDown)
+
+  // Fallback for browsers where the iframe listeners are blocked (Safari):
+  // poll the selection and replay it through the same handler.
+  let pollTimer: number | null = null
+
+  if (listenersBlocked) {
+    let lastSelectedCfi: string | null = null
+    let pendingCfi: string | null = null
+
+    pollTimer = window.setInterval(() => {
+      try {
+        const contentsList = rendition.getContents?.() as unknown as Contents[] | undefined
+        const contents = contentsList?.[0]
+        const selection = contents?.window?.getSelection?.()
+        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
+
+        if (contents && selection && range && !range.collapsed) {
+          let cfiRange: string | null = null
+          try {
+            cfiRange = contents.cfiFromRange(range)
+          } catch {
+            cfiRange = null
+          }
+
+          if (cfiRange && cfiRange !== lastSelectedCfi && cfiRange !== pendingCfi) {
+            // New selection — wait one more tick so mid-drag changes settle
+            // (mirrors epub.js' 250ms selectionchange debounce in Chrome)
+            pendingCfi = cfiRange
+          } else if (cfiRange && cfiRange === pendingCfi) {
+            pendingCfi = null
+            lastSelectedCfi = cfiRange
+            handleSelection(cfiRange, contents)
+          }
+        } else {
+          pendingCfi = null
+
+          if (lastSelectedCfi) {
+            // Selection collapsed or vanished (click away / page turn):
+            // dismiss the menu, replacing the undelivered 'mousedown'
+            lastSelectedCfi = null
+            handleMouseDown()
+          }
+        }
+      } catch {
+        // rendition torn down mid-poll, etc. — ignore
+      }
+    }, 300)
+  }
+
+  return () => {
+    if (pollTimer) {
+      clearInterval(pollTimer)
+      pollTimer = null
+    }
+  }
+}
+
+// Detect whether event listeners registered from this (parent) context run on
+// a sandboxed iframe document. WebKit/Safari blocks them (treating listener
+// callbacks as script execution in the frame); Chrome/Firefox allow them.
+function sandboxedIframeListenersBlocked(): boolean {
+  let blocked = false
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('sandbox', 'allow-same-origin')
+  iframe.style.display = 'none'
+  document.body.appendChild(iframe)
+
+  try {
+    const doc = iframe.contentDocument
+    if (!doc) return false
+    doc.open()
+    doc.write('<p>probe</p>')
+    doc.close()
+
+    let listenerRan = false
+    doc.addEventListener('probe', () => {
+      listenerRan = true
+    })
+    doc.dispatchEvent(new Event('probe'))
+    blocked = !listenerRan
+  } catch {
+    blocked = false
+  } finally {
+    iframe.remove()
+  }
+
+  return blocked
 }
 
 export default Reader
