@@ -48,11 +48,19 @@
     "singleQuote": true
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.103.1",
     "axios": "^1.13.1",
+    "clss": "^0.0.1",
+    "clsx": "^2.1.1",
     "epubjs": "^0.3.93",
     "i18next": "^26.0.3",
+    "motion": "^13.4.0",
+    "oidc-client-ts": "^3.5.0",
     "react-i18next": "^17.0.2",
-    "react-swipeable": "^7.0.2"
+    "react-icons": "^5.7.0",
+    "react-oidc-context": "^3.3.1",
+    "react-swipeable": "^7.0.2",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
