@@ -23,6 +23,7 @@
   "auth": {
     "login": "Log in",
     "logout": "Log out",
+    "account": "Account",
     "signingIn": "Signing you in…",
     "redirecting": "Redirecting…"
   }
