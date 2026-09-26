@@ -1,17 +1,11 @@
-import type { AxiosError } from 'axios'
 import { authApi } from './client'
 
+/**
+ * Post-login callback: authenticates an existing backend user or registers a
+ * new one, keyed on the JWT identity. Idempotent for returning users.
+ * (contract: app/api-contracts/users/authCallback.json)
+ */
 export async function authCallback(email: string) {
-  try {
-    const body = {
-      email,
-    }
-    const response = await authApi.post('/users/callback', body)
-    return response
-  } catch (err) {
-    const status = (err as AxiosError).response?.status
-    const data = (err as AxiosError).response?.data
-    console.log(status)
-    console.log(data)
-  }
+  const response = await authApi.post('/users/callback', { email })
+  return response.data
 }

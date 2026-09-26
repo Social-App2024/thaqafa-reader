@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useAuth } from "react-oidc-context";
 import { ViewPurchasedBooks } from "../api/booksList";
 
 const BooksContext = createContext(undefined);
@@ -74,6 +75,7 @@ const getInitialBook = (booksList, urlBookId) => {
 };
 
 export const BooksProvider = ({ children }) => {
+  const auth = useAuth();
   const [books, setBooks] = useState(fixedBooksList);
   const [searchParams] = useSearchParams();
   const urlBookId = searchParams.get('bookId');
@@ -87,10 +89,25 @@ export const BooksProvider = ({ children }) => {
     }
   }, [books, urlBookId]);
 
+  // Fetch the shelf keyed on the OIDC session: this provider mounts above the
+  // routes (often before Auth0 finishes the redirect/silent sign-in), so it
+  // must wait for auth to settle and re-run when login state changes.
   useEffect(() => {
+    if (auth.isLoading) return;
+
+    if (!auth.isAuthenticated) {
+      // Offline/demo mode (also the reset path on logout)
+      setBooks(fixedBooksList);
+      setSelectedBook(fixedBooksList[0]);
+      return;
+    }
+
+    let cancelled = false;
     const fetchBooks = async () => {
       try {
         const fetchedBooks = await ViewPurchasedBooks();
+        if (cancelled) return;
+
         if (fetchedBooks && Array.isArray(fetchedBooks) && fetchedBooks.length > 0) {
           setBooks(fetchedBooks);
 
@@ -112,7 +129,7 @@ export const BooksProvider = ({ children }) => {
       } catch (error) {
         if (error.response?.status === 401) {
           console.warn('Authentication required. Using fixed books list for demo.');
-          console.info('To authenticate: import { setAccessToken } from "./api/client" and call setAccessToken("your_token")');
+          console.info('Log in via /login to see your purchased books.');
         } else {
           console.error('Failed to fetch books:', error.message);
         }
@@ -120,7 +137,10 @@ export const BooksProvider = ({ children }) => {
     };
 
     fetchBooks();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.isLoading, auth.isAuthenticated]);
 
   const handleSetSelectedBook = (book) => {
     setSelectedBook(book);

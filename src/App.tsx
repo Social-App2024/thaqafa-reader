@@ -9,6 +9,11 @@ import { Styling } from './examples/Styling'
 import { PubSubProvider } from './context/PubSubContext'
 import { NotificationContainer } from './components/NotificationContainer'
 import { usePubSub } from './context/PubSubContext'
+import AuthCallback from './components/auth/AuthCallback'
+import SilentCallback from './components/auth/SilentCallback'
+import LogoutCallback from './components/auth/LogoutCallback'
+import Login from './components/auth/Login'
+import Logout from './components/auth/Logout'
 
 const AppContent = () => {
   const readerRef = useRef<HTMLDivElement>(null)
@@ -33,6 +38,11 @@ const AppContent = () => {
             } />
             <Route path="/selection" element={<Selection />} />
             <Route path="/styling" element={<Styling />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/logout" element={<Logout />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/auth/silent/callback" element={<SilentCallback />} />
+            <Route path="/logout/callback" element={<LogoutCallback />} />
           </Routes>
         </div>
       </div>

@@ -19,5 +19,11 @@
   "common": {
     "darkMode": "Dark Mode",
     "appName": "Thaqafa"
+  },
+  "auth": {
+    "login": "Log in",
+    "logout": "Log out",
+    "signingIn": "Signing you in…",
+    "redirecting": "Redirecting…"
   }
 }
