@@ -251,9 +251,8 @@ event-driven server-side).
   flow uses the `share.*` keys.
 - Two kinds of direction coexist: **UI direction** (i18next-driven, above) and
   **book content direction** (the library's `ReactReader` accepts an `isRTL` prop
-  that flips paging/swipe). The app does **not** drive `isRTL` yet — the demo books
-  carry an `isRTL` field that is currently unused; wire it up when serving Arabic
-  epubs whose progression is RTL.
+  that flips paging/swipe). `Reader.tsx` drives it from the selected book's
+  `isRTL` field (Arabic epubs whose progression is RTL).
 
 ## Conventions (house rules)
 

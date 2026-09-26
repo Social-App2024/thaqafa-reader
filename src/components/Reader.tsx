@@ -33,6 +33,7 @@ export function Reader() {
   const bookUrl = bookBlobUrl || booksContext?.selectedBook?.url || DEMO_URL
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
   const bookAuthor = booksContext?.selectedBook?.author || 'Unknown Author'
+  const isRTL = booksContext?.selectedBook?.isRTL === true
 
   function clearSaveTimer() {
     if (saveTimerRef.current) {
@@ -269,6 +270,7 @@ export function Reader() {
         location={location}
         locationChanged={handleLocationChange}
         getRendition={handleRenditionReady}
+        isRTL={isRTL}
         readerStyles={{
           ...ReactReaderStyle,
           readerArea: {
