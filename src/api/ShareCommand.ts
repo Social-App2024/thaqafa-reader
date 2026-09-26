@@ -26,6 +26,7 @@ async function shareQuote(data: Quote) {
             category: 'photo',
             imagesUrls: [url],
             tags: ['book', 'quote'],
+            isQuote: true,
         })
         console.log('post published')
     } catch (error) {
