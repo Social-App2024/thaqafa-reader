@@ -24,8 +24,9 @@ v2.0.12** (git `upstream` remote still points there; `package.json` is still nam
 
 ## Where this sits in the platform
 
-Thaqafa's components live as **sibling repositories** under the same parent folder. The
-central index is [`../thaqafa-ai-docbase`](../thaqafa-ai-docbase):
+Thaqafa's components live as **sibling repositories** under the same parent folder.
+The platform's **project docs and component definitions** live at
+[`../thaqafa-ai-docbase`](../thaqafa-ai-docbase), whose `INDEX.md` is the central index:
 
 | Doc | What it gives you |
 |-----|-------------------|
