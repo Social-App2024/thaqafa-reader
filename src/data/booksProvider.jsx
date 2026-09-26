@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ViewPurchasedBooks } from "../api/booksList";
 
 const BooksContext = createContext(undefined);
@@ -63,13 +64,28 @@ const saveBookToStorage = (book) => {
   }
 };
 
-const getInitialBook = (booksList) => {
-  return getStoredBook() || booksList[0];
+const findBookById = (booksList, bookId) => {
+  if (!bookId) return null;
+  return booksList.find(book => String(book.bookId) === String(bookId)) || null;
+};
+
+const getInitialBook = (booksList, urlBookId) => {
+  return findBookById(booksList, urlBookId) || getStoredBook() || booksList[0];
 };
 
 export const BooksProvider = ({ children }) => {
   const [books, setBooks] = useState(fixedBooksList);
-  const [selectedBook, setSelectedBook] = useState(() => getInitialBook(fixedBooksList));
+  const [searchParams] = useSearchParams();
+  const urlBookId = searchParams.get('bookId');
+  const [selectedBook, setSelectedBook] = useState(() => getInitialBook(fixedBooksList, urlBookId));
+
+  // A ?bookId= URL param takes precedence over the stored selection
+  useEffect(() => {
+    const urlBook = findBookById(books, urlBookId);
+    if (urlBook) {
+      handleSetSelectedBook(urlBook);
+    }
+  }, [books, urlBookId]);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -77,6 +93,12 @@ export const BooksProvider = ({ children }) => {
         const fetchedBooks = await ViewPurchasedBooks();
         if (fetchedBooks && Array.isArray(fetchedBooks) && fetchedBooks.length > 0) {
           setBooks(fetchedBooks);
+
+          const urlBook = findBookById(fetchedBooks, urlBookId);
+          if (urlBook) {
+            handleSetSelectedBook(urlBook);
+            return;
+          }
 
           const storedBook = getStoredBook();
           const isStoredBookValid = storedBook && fetchedBooks.some(book => book.bookId === storedBook.bookId);
