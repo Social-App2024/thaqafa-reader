@@ -32,8 +32,21 @@ export function Reader() {
   const bookId = booksContext?.selectedBook?.bookId
   const bookUrl = bookBlobUrl || booksContext?.selectedBook?.url || DEMO_URL
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
-  const bookAuthor = booksContext?.selectedBook?.author || 'Unknown Author'
+  // API books carry `authors: string[]`; the demo fallback list uses `author: string`
+  const bookAuthors = booksContext?.selectedBook?.authors
+  const bookAuthor = (Array.isArray(bookAuthors) && bookAuthors.length > 0
+    ? bookAuthors.join(', ')
+    : booksContext?.selectedBook?.author) || 'Unknown Author'
   const isRTL = booksContext?.selectedBook?.isRTL === true
+
+  // Latest book info for the text-selection handler: the rendition (and its
+  // selection listeners) is created before the books fetch refreshes
+  // selectedBook, and isn't re-created when only the book object changes —
+  // so the handler reads through a ref instead of capturing stale values.
+  const bookInfoRef = useRef({ bookTitle, bookAuthor })
+  useEffect(() => {
+    bookInfoRef.current = { bookTitle, bookAuthor }
+  })
 
   function clearSaveTimer() {
     if (saveTimerRef.current) {
@@ -181,7 +194,7 @@ export function Reader() {
     setupLocationGeneration(_rendition)
     setupErrorHandling(_rendition)
     textSelectionCleanupRef.current?.()
-    textSelectionCleanupRef.current = setupTextSelection(_rendition, pubsub, bookTitle, bookAuthor)
+    textSelectionCleanupRef.current = setupTextSelection(_rendition, pubsub, bookInfoRef)
   }
 
   function setupLocationGeneration(rendition: Rendition) {
@@ -295,8 +308,7 @@ function isValidEpub(arrayBuffer: ArrayBuffer): boolean {
 function setupTextSelection(
   rendition: Rendition,
   pubsub: PubSub,
-  bookTitle: string,
-  bookAuthor: string
+  bookInfoRef: { current: { bookTitle: string; bookAuthor: string } }
 ): () => void {
   let currentHighlight: string | null = null
   let currentContents: Contents | null = null
@@ -368,8 +380,8 @@ function setupTextSelection(
           x,
           y,
           text: selectedText,
-          bookTitle,
-          bookAuthor
+          bookTitle: bookInfoRef.current.bookTitle,
+          bookAuthor: bookInfoRef.current.bookAuthor
         })
       }
     }

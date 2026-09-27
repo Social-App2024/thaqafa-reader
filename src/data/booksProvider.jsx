@@ -118,9 +118,13 @@ export const BooksProvider = ({ children }) => {
           }
 
           const storedBook = getStoredBook();
-          const isStoredBookValid = storedBook && fetchedBooks.some(book => book.bookId === storedBook.bookId);
+          const freshStoredBook = storedBook ? findBookById(fetchedBooks, storedBook.bookId) : null;
 
-          if (!isStoredBookValid) {
+          if (freshStoredBook) {
+            // Replace the stored selection with the fresh API copy — the
+            // localStorage object may predate new response fields (e.g. `authors`)
+            handleSetSelectedBook(freshStoredBook);
+          } else {
             setSelectedBook(fetchedBooks[0]);
           }
         } else {
