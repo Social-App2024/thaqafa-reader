@@ -301,7 +301,8 @@ event-driven server-side).
   fails — reading positions then sync under that ID.
 - `useReaderTheme` (font-size/dark-mode hook) exists but `Reader.tsx` currently
   applies theme inline — minor duplication.
-- Quote-image rendering uses a fixed Arial/Georgia canvas layout — Arabic quote text
-  renders LTR-aligned; verify before shipping Arabic quote shares.
+- Quote-image rendering uses a fixed Arial/Georgia canvas layout; RTL quotes are
+  detected via a Unicode-range regex and drawn with `ctx.direction='rtl'` +
+  right alignment (verified in Chrome for Arabic quote shares).
 - epub.js limitations (upstream): no whole-book page numbers (per-chapter only),
   epub 2 standard, rendering happens in a sandboxed iframe.

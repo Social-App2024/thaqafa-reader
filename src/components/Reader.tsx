@@ -314,7 +314,10 @@ function setupTextSelection(
       rendition.annotations.remove(currentHighlight, 'highlight')
     }
 
-    const selectedText = rendition.getRange(cfiRange).toString()
+    // Range.toString() returns the raw source text — newlines/indentation from
+    // the epub's XHTML markup come through as-is and render as unwanted gaps in
+    // the share-quote image, so collapse whitespace runs into single spaces
+    const selectedText = rendition.getRange(cfiRange).toString().replace(/\s+/g, ' ').trim()
 
     rendition.annotations.add(
       'highlight',

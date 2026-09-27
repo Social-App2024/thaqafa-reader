@@ -96,44 +96,50 @@ export const ShareContextMenu = () => {
         // Background - off-white color
         ctx.fillStyle = '#f5f5f5'
         ctx.fillRect(0, 0, canvas.width, canvas.height)
-    
+
+        // RTL quotes (e.g. Arabic books) must be laid out right-to-left — without
+        // this Chrome renders the words in logical (LTR) order and left-aligned
+        const isRTLText = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/.test(text)
+        ctx.direction = isRTLText ? 'rtl' : 'ltr'
+        ctx.textAlign = isRTLText ? 'right' : 'left'
+        const textX = isRTLText ? canvas.width - padding : padding
+
         // Draw decorative quote marks
         ctx.font = `bold ${quotationMarkSize}px Georgia`
         ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'
-        ctx.fillText('"', padding - 10, 60)
-    
+        ctx.fillText('"', isRTLText ? canvas.width - padding + 10 : padding - 10, 60)
+
         // Draw quote text
         ctx.fillStyle = '#000000'
         ctx.font = `bold ${quoteFontSize}px Arial`
-        ctx.textAlign = 'left'
-    
+
         // Word wrap the text
         line = ''
         let y = topPadding
-    
+
         for (let i = 0; i < words.length; i++) {
           const testLine = line + words[i] + ' '
           const metrics = ctx.measureText(testLine)
-    
+
           if (metrics.width > contentWidth && i > 0) {
-            ctx.fillText(line, padding, y)
+            ctx.fillText(line, textX, y)
             line = words[i] + ' '
             y += lineHeight
           } else {
             line = testLine
           }
         }
-    
-        ctx.fillText(line, padding, y)
-    
+
+        ctx.fillText(line, textX, y)
+
         // Draw book info
         y += 50
         ctx.fillStyle = '#000000'
         ctx.font = `italic ${titleFontSize}px Arial`
-        ctx.fillText(`— ${title}`, padding, y)
-    
+        ctx.fillText(`— ${title}`, textX, y)
+
         ctx.font = `${authorFontSize}px Arial`
-        ctx.fillText(`by ${author}`, padding, y + 22)
+        ctx.fillText(`by ${author}`, textX, y + 22)
     
         return canvas.toDataURL('image/png')
       }
