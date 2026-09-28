@@ -24,8 +24,9 @@ v2.0.12** (git `upstream` remote still points there; `package.json` is still nam
 
 ## Where this sits in the platform
 
-Thaqafa's components live as **sibling repositories** under the same parent folder. The
-central index is [`../thaqafa-ai-docbase`](../thaqafa-ai-docbase):
+Thaqafa's components live as **sibling repositories** under the same parent folder.
+The platform's **project docs and component definitions** live at
+[`../thaqafa-ai-docbase`](../thaqafa-ai-docbase), whose `INDEX.md` is the central index:
 
 | Doc | What it gives you |
 |-----|-------------------|
@@ -66,7 +67,10 @@ The backend must be running on `http://localhost:9092/` for anything authenticat
 - **epubjs 0.3.93** — iframe-based epub rendering (epub 2 standard; most epub 3 works)
 - **TypeScript 5.7** — `strict: true` **with `allowJs: true`**: JS and TS coexist
   (older files are `.js`/`.jsx`, newer ones `.ts`/`.tsx`)
-- **axios** — HTTP client with a refresh-token interceptor (`src/api/client.js`)
+- **axios** — HTTP client with an OIDC silent-renew interceptor (`src/api/client.ts`)
+- **react-oidc-context** + **oidc-client-ts** — Auth0 over OIDC, **same Auth0
+  application and audience as Thaqafa-Frontend** (`https://social-api/`), so one
+  Auth0 SSO session logs the user into both apps
 - **i18next** + **react-i18next** — EN/AR localization (`src/i18n.ts`)
 - **TailwindCSS 3.4** + PostCSS/autoprefixer
 - **use-local-storage-state** — dark mode and reading positions in localStorage
@@ -86,13 +90,14 @@ thaqafa-reader/
 │   ├── main.tsx                #   entry: provider tree (see Boot section)
 │   ├── App.tsx                 #   routes + NavBarMock + global NotificationContainer
 │   ├── i18n.ts                 #   i18next init (en/ar, localStorage, <html dir>)
-│   ├── api/                    #   axios wrappers (.js): client, bookContent, booksList,
+│   ├── api/                    #   axios wrappers: client, auth, bookContent, booksList,
 │   │                           #   readingPosition, ShareCommand, userProfile
 │   ├── components/             #   Reader.tsx (core), ReaderWrapper, BooksList,
-│   │                           #   NavbarMock, ShareContextMenu, Notification*, config.ts
+│   │                           #   NavbarMock, ShareContextMenu, Notification*, config.ts,
+│   │                           #   auth/ (AuthGate, login/logout + OIDC callbacks)
 │   ├── context/PubSubContext.tsx   # global event bus (singleton via Context)
-│   ├── data/                   #   providers: booksProvider, darkModeProvider,
-│   │                           #   profileProvider, readingPositionProvider
+│   ├── data/                   #   oidc.ts (Auth0 UserManager) + providers: booksProvider,
+│   │                           #   darkModeProvider, profileProvider, readingPositionProvider
 │   ├── hooks/useReaderTheme.ts #   font-size + theme applier for a rendition
 │   ├── localization/           #   en.json, ar.json
 │   ├── util/pubSub.js          #   PubSub class (publish/subscribe/unsubscribe)
@@ -111,6 +116,7 @@ thaqafa-reader/
 ## Boot & provider tree
 
 `src/main.tsx` nests (outer → inner): `StrictMode` → `BrowserRouter` →
+`AuthProvider` (react-oidc-context) → `AuthGate` (silent-SSO boot gate) →
 `ProfileProvider` → `ReadingPositionProvider` → `DarkModeProvider` → `BooksProvider` →
 `App`. `App.tsx` wraps everything in `PubSubProvider` and mounts a global
 `NotificationContainer` outside the routed content.
@@ -120,6 +126,11 @@ Routes (`src/App.tsx`):
 | Path | Element | Notes |
 |------|---------|-------|
 | `/` | `BooksList` + `Reader` | main screen: book shelf sidebar (md+) + reader |
+| `/login` | `auth/Login` | redirects to Auth0 (home if already signed in) |
+| `/logout` | `auth/Logout` | starts Auth0 logout redirect |
+| `/auth/callback` | `auth/AuthCallback` | OIDC redirect target → POST `/users/callback` → home |
+| `/auth/silent/callback` | `auth/SilentCallback` | iframe target for silent renew |
+| `/logout/callback` | `auth/LogoutCallback` | Auth0 logout landing |
 | `/selection` | `examples/Selection` | upstream demo: highlight annotations list |
 | `/styling` | `examples/Styling` | upstream demo: theme overrides |
 
@@ -144,10 +155,13 @@ exposed as a singleton through `PubSubContext` (`usePubSub()`). Known topics:
 
 ### Reading flow
 
-1. `BooksProvider` fetches the shelf from `GET /reader/purchased-books`. On failure
-   (e.g. 401) it falls back to a **fixed demo list** of the public epubs in
-   `public/files/`. The selected book is persisted in localStorage under
-   `thaqafa_selected_book`.
+1. `BooksProvider` fetches the shelf from `GET /reader/purchased-books` **once the
+   OIDC session resolves** (it waits for `auth.isLoading` to clear and re-runs when
+   `auth.isAuthenticated` changes, since the provider mounts above the routes —
+   before Auth0 finishes the redirect/silent sign-in). When unauthenticated (or on
+   fetch failure, e.g. 401) it falls back to a **fixed demo list** of the public
+   epubs in `public/files/`, and logout resets to that demo list. The selected book
+   is persisted in localStorage under `thaqafa_selected_book`.
 2. `Reader.tsx` resolves the book source: a public URL (`/files/...` or `http...`) is
    used directly; otherwise it fetches the protected bytes via
    `GET /reader/content/{bookId}` as a **blob** (60s timeout), validates the zip `PK`
@@ -156,8 +170,9 @@ exposed as a singleton through `PubSubContext` (`usePubSub()`). Known topics:
    location changes as **epub CFI strings**.
 4. Position is restored on book/user change and **saved debounced (1s)** through
    `ReadingPositionProvider`: written to localStorage (`reading-positions`, keyed
-   `userId → bookId`) and POSTed to the backend. On load, backend positions are merged
-   in — **backend wins when its timestamp is newer**.
+   `userId → bookId`) and POSTed to the backend **only when signed in**. On load
+   (signed in), backend positions are merged in — **backend wins when its
+   timestamp is newer**.
 5. Theme: `DarkModeProvider` (localStorage key `darkMode`) drives
    `rendition.themes.override('color'|'background', …)` — black bg / light text in dark
    mode. Epub chrome background follows via `readerStyles` override.
@@ -178,23 +193,47 @@ exposed as a singleton through `PubSubContext` (`usePubSub()`). Known topics:
 
 ## Backend integration
 
-`src/api/client.js` is a shared axios instance: base URL **hardcoded** to
-`http://localhost:9092/`, `withCredentials: true` (carries the HttpOnly refresh-token
-cookie), 10s timeout. The access token lives in localStorage (`access_token`) and is
-sent as `Bearer`. On **401** the interceptor POSTs `/auth/refresh` (cookie-based),
-queues concurrent requests until the refresh resolves, retries the original request
-once, and clears the token if refresh fails.
+`src/api/client.ts` is a shared axios setup: base URL **hardcoded** to
+`http://localhost:9092/`, `authApi` with `withCredentials: true`, 10s timeout.
+
+**Authentication is OIDC/Auth0, shared with Thaqafa-Frontend.** Both apps use the
+same Auth0 application (`src/data/oidc.ts`: same authority, `client_id`, and
+audience `https://social-api/`), so the Auth0 SSO session is common to both —
+logging into either app logs into the other. The OIDC user record is persisted
+in **localStorage** (`userStore: new WebStorageStateStore({ store: window.localStorage })`
+— the library default is tab-scoped sessionStorage, which would force a fresh
+SSO roundtrip on every new tab). On boot `AuthGate` resolves the session in
+order: stored user → iframe `signinSilent()` → top-level `prompt=none` redirect
+probe. Auth0 answers the probe with a code (seamless login), `error=login_required`
+(no SSO session — `AuthCallback` returns to the page the probe started from,
+stored in sessionStorage under `SSO_RETURN_KEY`), or `error=consent_required`
+(session exists but silent auth is refused — **Auth0 never skips consent for
+localhost redirect URIs**), which `AuthCallback` turns into one plain interactive
+redirect: at most a one-click consent screen on localhost, zero interaction on
+real domains. `automaticSilentRenew` keeps tokens fresh (works on real domains;
+fails harmlessly on localhost, where re-auth means the one-click consent again).
+The access token comes from `userManager.getUser()` and is sent as `Bearer` by
+the `authApi` request interceptor. On **401** the response interceptor tries one
+silent renew and retries the original request; if the renew fails it simply
+rejects — it does **not** drop the stored session (a flaky renew must never log
+the user out), and callers degrade to the demo/offline fallbacks instead of
+forcing a redirect. Authenticated providers (`BooksProvider`, `ProfileProvider`,
+`ReadingPositionProvider`) only call the backend once `auth.isAuthenticated` is
+true, so no unauthenticated 401 storms happen. After a redirect login,
+`auth/AuthCallback` POSTs `/users/callback` (idempotent
+register-or-authenticate, per `../app/api-contracts/users/authCallback.json`)
+before navigating home.
 
 Endpoints this app calls:
 
 | File | Endpoint | Notes |
 |------|----------|-------|
-| `api/booksList.js` | `GET /reader/purchased-books` | the user's shelf |
-| `api/bookContent.js` | `GET /reader/content/{bookId}` | protected epub bytes (blob); 403 = not purchased |
+| `api/auth.ts` | `POST /users/callback` | register-or-authenticate right after OIDC login |
+| `api/booksList.ts` | `GET /reader/purchased-books` | the user's shelf |
+| `api/bookContent.ts` | `GET /reader/content/{bookId}` | protected epub bytes (blob); 403 = not purchased |
 | `api/readingPosition.js` | `POST /reader/reading-position`, `GET /reader/reading-position/{bookId}`, `GET /reader/reading-positions`, `DELETE /reader/reading-position/{bookId}` | userId comes from the token server-side |
-| `api/userProfile.js` | `GET /users/me` | profile; on failure `profileProvider` falls back to an **offline userId** |
-| `api/ShareCommand.js` | `POST /assets/upload`, `POST /posts/publish` | quote-image post pipeline |
-| `api/client.js` | `POST /auth/refresh` | token rotation |
+| `api/userProfile.ts` | `GET /users/me` | profile; on failure (or logged out) `profileProvider` falls back to an **offline userId** |
+| `api/ShareCommand.ts` | `POST /assets/upload`, `POST /posts/publish` | quote-image post pipeline |
 
 **Contract caveat:** `../app/api-contracts` has **no `reader/` domain yet** — the
 `/reader/*` endpoints above are not covered by contract files; verify shapes against
@@ -212,9 +251,8 @@ event-driven server-side).
   flow uses the `share.*` keys.
 - Two kinds of direction coexist: **UI direction** (i18next-driven, above) and
   **book content direction** (the library's `ReactReader` accepts an `isRTL` prop
-  that flips paging/swipe). The app does **not** drive `isRTL` yet — the demo books
-  carry an `isRTL` field that is currently unused; wire it up when serving Arabic
-  epubs whose progression is RTL.
+  that flips paging/swipe). `Reader.tsx` drives it from the selected book's
+  `isRTL` field (Arabic epubs whose progression is RTL).
 
 ## Conventions (house rules)
 
@@ -239,16 +277,32 @@ event-driven server-side).
   publishing fields (`main`/`module`/`exports`/`files`), and `build` = library build.
   For the app you want `build::app` (local) or `build-vercel` (deploy).
 - **Jest is configured but there are no test files.**
-- **API URL and auth are hardcoded** — no `import.meta.env` usage; the access token
-  must be placed in localStorage manually for local authenticated testing
-  (`setAccessToken` is exported from `src/api/client.js`).
+- **API URL and Auth0 config are hardcoded** — no `import.meta.env` usage.
+- **Auth0 dashboard must whitelist this app's origins** for SSO to work: add the
+  reader's callback/logout/web-origin URLs (`http://localhost:3000/auth/callback`,
+  `http://localhost:3000/logout/callback`, `http://localhost:3000`, plus the Vercel
+  equivalents) to the shared Auth0 application (`2380W3JH8fky1VApavGCt1SkwerrVFTN`).
+- **Silent SSO can never work on localhost** — Auth0 treats localhost callback
+  URIs as never-verifiable first-party, so `prompt=none` (iframe or probe)
+  always returns `consent_required` there, and consent grants are not
+  remembered. Cold-starting the reader from a frontend session therefore costs
+  **one consent Accept click** (no credential re-entry); afterwards the
+  localStorage session carries the reader for the token's lifetime (~24h).
+  Seamless zero-click SSO works as-is on real domains — for seamless local dev,
+  use Auth0's `/etc/hosts` workaround (serve both apps on a hosts alias such as
+  `thaqafa.local`, register its callback/logout/web-origin URLs in the Auth0
+  app, and add it to the backend CORS origins in `WebOriginsConfig`).
+- A brand-new user whose **first-ever login happens on the reader** gets a pending
+  profile (`onboarded=false`) but is not sent to onboarding — that flow lives in
+  Thaqafa-Frontend only.
 - `NavBarMock` is dev scaffolding; `en.json`/`ar.json` still contain placeholder
   navbar values (`"home": "A"`, `"discover": "B"`, `"people": "C"`).
 - `profileProvider` falls back to a hardcoded **offline userId** when `/users/me`
   fails — reading positions then sync under that ID.
 - `useReaderTheme` (font-size/dark-mode hook) exists but `Reader.tsx` currently
   applies theme inline — minor duplication.
-- Quote-image rendering uses a fixed Arial/Georgia canvas layout — Arabic quote text
-  renders LTR-aligned; verify before shipping Arabic quote shares.
+- Quote-image rendering uses a fixed Arial/Georgia canvas layout; RTL quotes are
+  detected via a Unicode-range regex and drawn with `ctx.direction='rtl'` +
+  right alignment (verified in Chrome for Arabic quote shares).
 - epub.js limitations (upstream): no whole-book page numbers (per-chapter only),
   epub 2 standard, rendering happens in a sandboxed iframe.
