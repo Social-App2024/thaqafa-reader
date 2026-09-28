@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import BooksList from './components/BooksList'
 import { useRef } from 'react'
@@ -14,6 +14,18 @@ import SilentCallback from './components/auth/SilentCallback'
 import LogoutCallback from './components/auth/LogoutCallback'
 import Login from './components/auth/Login'
 import Logout from './components/auth/Logout'
+
+// Deep links sometimes arrive as a path ("/bookId=<id>") instead of the
+// query form ("/?bookId=<id>") that BooksProvider reads. Normalize the path
+// form so the book opens; any other unmatched URL falls back to the shelf.
+const BookIdPathRedirect = () => {
+  const location = useLocation()
+  const match = location.pathname.match(/^\/bookId=([^/]+)$/)
+  if (match) {
+    return <Navigate to={`/?bookId=${encodeURIComponent(match[1])}`} replace />
+  }
+  return <Navigate to="/" replace />
+}
 
 const AppContent = () => {
   const readerRef = useRef<HTMLDivElement>(null)
@@ -43,6 +55,7 @@ const AppContent = () => {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/silent/callback" element={<SilentCallback />} />
             <Route path="/logout/callback" element={<LogoutCallback />} />
+            <Route path="*" element={<BookIdPathRedirect />} />
           </Routes>
         </div>
       </div>
