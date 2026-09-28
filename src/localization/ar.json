@@ -1,4 +1,5 @@
 {
+  "platform_name": "ثقافة",
   "navbar": {
     "home": "A",
     "discover": "B",
@@ -7,6 +8,16 @@
     "language": {
       "english": "الإنجليزية",
       "arabic": "العربية"
+    }
+  },
+  "routes": {
+    "errors": {
+      "not_found_title": "",
+      "not_found_message": ""
+    },
+    "splash": {
+      "subtitle": "",
+      "loading_label": ""
     }
   },
   "share": {

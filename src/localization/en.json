@@ -1,4 +1,5 @@
 {
+  "platform_name": "Thaqafa",
   "navbar": {
     "home": "A",
     "discover": "B",
@@ -7,6 +8,16 @@
     "language": {
       "english": "EN",
       "arabic": "AR"
+    }
+  },
+  "routes": {
+    "errors": {
+      "not_found_title": "Error 404 😔",
+      "not_found_message": "Unable to find page the requested page..."
+    },
+    "splash": {
+      "subtitle": "Make your day a little brighter",
+      "loading_label": "Loading"
     }
   },
   "share": {

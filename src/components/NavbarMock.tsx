@@ -17,8 +17,14 @@ const LanguageButton = ({
   function changeLanguage() {
     console.log('[LanguageButton] Changing language to:', languageCode)
     i18n.changeLanguage(languageCode).then(() => {
-      console.log('[LanguageButton] Language changed successfully to:', i18n.language)
-      console.log('[LanguageButton] Current dir attribute:', document.documentElement.dir)
+      console.log(
+        '[LanguageButton] Language changed successfully to:',
+        i18n.language,
+      )
+      console.log(
+        '[LanguageButton] Current dir attribute:',
+        document.documentElement.dir,
+      )
     })
   }
 
@@ -72,9 +78,20 @@ export default function NavBarMock() {
         </Link>
         <div className="hidden md:flex gap-x-6 px-10 font-space items-center">
           <NavbarCenterItem link={'/'}> {t('navbar.home')} </NavbarCenterItem>|
-          <NavbarCenterItem link={'/discover'}> {t('navbar.discover')} </NavbarCenterItem>|
-          <NavbarCenterItem link={'/people'}> {t('navbar.people')} </NavbarCenterItem>|
-          <NavbarCenterItem link={'/selection'}> {t('navbar.selection')} </NavbarCenterItem>
+          <NavbarCenterItem link={'/discover'}>
+            {' '}
+            {t('navbar.discover')}{' '}
+          </NavbarCenterItem>
+          |
+          <NavbarCenterItem link={'/people'}>
+            {' '}
+            {t('navbar.people')}{' '}
+          </NavbarCenterItem>
+          |
+          <NavbarCenterItem link={'/selection'}>
+            {' '}
+            {t('navbar.selection')}{' '}
+          </NavbarCenterItem>
         </div>
         <div className="flex items-center w-1/4 justify-end">
           <div className="hidden lg:flex px-10 font-space items-center justify-center ">
@@ -84,7 +101,9 @@ export default function NavBarMock() {
             ].map(({ shorthand, slug }, idx, arr) => {
               return (
                 <div key={slug}>
-                  <LanguageButton languageCode={slug}>{shorthand}</LanguageButton>
+                  <LanguageButton languageCode={slug}>
+                    {shorthand}
+                  </LanguageButton>
                   {idx !== arr.length - 1 && <span className="mx-4">|</span>}
                 </div>
               )

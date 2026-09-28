@@ -1,9 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
-import BooksList from './components/BooksList'
-import { useRef } from 'react'
-import Reader from './components/Reader'
-import NavBarMock from './components/NavbarMock'
 import { Selection } from './examples/Selection'
 import { Styling } from './examples/Styling'
 import { PubSubProvider } from './context/PubSubContext'
@@ -14,10 +10,9 @@ import SilentCallback from './components/auth/SilentCallback'
 import LogoutCallback from './components/auth/LogoutCallback'
 import Login from './components/auth/Login'
 import Logout from './components/auth/Logout'
+import ProtectedRoute from './components/ProtectedRoute'
+import Home from './routes/home'
 
-// Deep links sometimes arrive as a path ("/bookId=<id>") instead of the
-// query form ("/?bookId=<id>") that BooksProvider reads. Normalize the path
-// form so the book opens; any other unmatched URL falls back to the shelf.
 const BookIdPathRedirect = () => {
   const location = useLocation()
   const match = location.pathname.match(/^\/bookId=([^/]+)$/)
@@ -28,37 +23,30 @@ const BookIdPathRedirect = () => {
 }
 
 const AppContent = () => {
-  const readerRef = useRef<HTMLDivElement>(null)
   const pubsub = usePubSub()
 
   return (
     <>
-      <div className="relative h-full w-full min-h-screen flex flex-col gap-y-8 bg-stone-100 p-4">
-        {/* HEADER IS ONLY THERE FOR MOCKING PURPOSES, FEEL FREE TO REMOVE IT IF YOU WANT THE CLEAN PAGE! */}
-        <NavBarMock />
-        <div className="flex flex-col w-full">
-          <Routes>
-            <Route path="/" element={
-              <div className="flex items-start gap-x-4 w-full">
-                <div className="hidden md:block w-40 h-screen overflow-y-auto">
-                  <BooksList />
-                </div>
-                <div ref={readerRef} className="grow relative">
-                  <Reader />
-                </div>
-              </div>
-            } />
-            <Route path="/selection" element={<Selection />} />
-            <Route path="/styling" element={<Styling />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/logout" element={<Logout />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/auth/silent/callback" element={<SilentCallback />} />
-            <Route path="/logout/callback" element={<LogoutCallback />} />
-            <Route path="*" element={<BookIdPathRedirect />} />
-          </Routes>
-        </div>
-      </div>
+      {/* <div className="relative h-full w-full min-h-screen flex flex-col gap-y-8 bg-stone-100 p-4"> */}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/selection" element={<Selection />} />
+        <Route path="/styling" element={<Styling />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/logout" element={<Logout />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/auth/silent/callback" element={<SilentCallback />} />
+        <Route path="/logout/callback" element={<LogoutCallback />} />
+        <Route path="*" element={<BookIdPathRedirect />} />
+      </Routes>
+      {/* </div> */}
       {/* Global NotificationContainer - displays notifications from anywhere in the app */}
       <NotificationContainer pubsub={pubsub} />
     </>
