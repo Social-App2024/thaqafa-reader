@@ -1,5 +1,6 @@
 import { createContext, useContext, useCallback, useEffect, type ReactNode } from 'react'
 import useLocalStorageState from 'use-local-storage-state'
+import { useAuth } from 'react-oidc-context'
 import { saveReadingPosition, getAllReadingPositions } from '../api/readingPosition'
 import { useProfile } from './profileProvider'
 
@@ -27,6 +28,7 @@ const ReadingPositionContext = createContext<ReadingPositionContextType | undefi
 
 export const ReadingPositionProvider = ({ children }: { children: ReactNode }) => {
   const { userId } = useProfile()
+  const auth = useAuth()
   const [allPositions, setAllPositions] = useLocalStorageState<UserReadingPositions>(
     'reading-positions',
     { defaultValue: {} }
@@ -52,11 +54,12 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
       }
     }))
 
-    // Save to backend immediately (no complex sync logic)
+    // Save to backend immediately (no complex sync logic) — only when signed in
+    if (!auth.isAuthenticated) return
     saveReadingPosition(bookId, newPosition).catch(error => {
       console.error('[ReadingPosition] Failed to sync to backend:', error)
     })
-  }, [setAllPositions])
+  }, [setAllPositions, auth.isAuthenticated])
 
   const clearPosition = useCallback((bookId: string, userId: string) => {
     setAllPositions(prev => {
@@ -72,9 +75,9 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
     })
   }, [setAllPositions])
 
-  // Load positions from backend on mount
+  // Load positions from backend once signed in (localStorage only when logged out)
   useEffect(() => {
-    if (!userId) return
+    if (!userId || !auth.isAuthenticated) return
 
     const loadBackendPositions = async () => {
       try {
@@ -111,7 +114,7 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
     }
 
     loadBackendPositions()
-  }, [userId, setAllPositions])
+  }, [userId, auth.isAuthenticated, setAllPositions])
 
   return (
     <ReadingPositionContext.Provider value={{

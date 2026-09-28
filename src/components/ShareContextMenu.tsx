@@ -99,7 +99,7 @@ export const ShareContextMenu = () => {
 
         // RTL quotes (e.g. Arabic books) must be laid out right-to-left — without
         // this Chrome renders the words in logical (LTR) order and left-aligned
-        const isRTLText = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-�]/.test(text)
+        const isRTLText = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/.test(text)
         ctx.direction = isRTLText ? 'rtl' : 'ltr'
         ctx.textAlign = isRTLText ? 'right' : 'left'
         const textX = isRTLText ? canvas.width - padding : padding

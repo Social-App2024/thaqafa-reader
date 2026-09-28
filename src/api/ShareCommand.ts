@@ -1,5 +1,5 @@
 import type { Quote } from '../types/quote'
-import { api } from './client'
+import { authApi } from './client'
 
 async function shareQuote(data: Quote) {
     try {
@@ -12,7 +12,7 @@ async function shareQuote(data: Quote) {
         formData.append('container', 'tmp')
 
         // Future: Upload to server and publish
-        const uploadResponse = await api.post('/assets/upload', formData)
+        const uploadResponse = await authApi.post('/assets/upload', formData)
         console.log('file uploaded')
 
         const url = uploadResponse.data?.url || uploadResponse.data
@@ -21,7 +21,7 @@ async function shareQuote(data: Quote) {
             throw new Error('Upload succeeded but no URL returned from server')
         }
 
-        const publishResponse = await api.post('/posts/publish', {
+        const publishResponse = await authApi.post('/posts/publish', {
             // profileId:"66b7a5025cf5d67e2eeaa110",
             category: 'photo',
             imagesUrls: [url],

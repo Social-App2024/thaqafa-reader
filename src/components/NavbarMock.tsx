@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useDarkMode } from '../data/darkModeProvider'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from 'react-oidc-context'
+import ProfileBar from './ProfileBar'
 
 const LanguageButton = ({
   children,
@@ -55,6 +57,7 @@ export default function NavBarMock() {
   const profile: { id: number; name: string } = { id: 4, name: 'testing' }
   const { isDarkMode, toggleDarkMode } = useDarkMode()
   const { t } = useTranslation()
+  const auth = useAuth()
 
   return (
     <>
@@ -99,9 +102,17 @@ export default function NavBarMock() {
               <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
             </label>
           </div>
-          <div className="mr-4">
-            {/* Profile Icon for Quick Access.. yippe */}
-            <div className="h-8 w-8 border-2 border-green-500 bg-green-500 rounded-full"></div>
+          <div className="me-4 flex items-center gap-x-3">
+            {auth.isAuthenticated ? (
+              <ProfileBar />
+            ) : (
+              <Link
+                to="/login"
+                className="py-1.5 px-3 text-sm font-semibold font-poppins text-black rounded-2xl hover:bg-primary hover:text-green-500 transition-colors"
+              >
+                {t('auth.login')}
+              </Link>
+            )}
           </div>
         </div>
       </div>

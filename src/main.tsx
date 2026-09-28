@@ -9,19 +9,26 @@ import { DarkModeProvider } from './data/darkModeProvider'
 import { ReadingPositionProvider } from './data/readingPositionProvider'
 import { ProfileProvider } from './data/profileProvider'
 import { BrowserRouter } from 'react-router-dom'
+import { AuthProvider } from 'react-oidc-context'
+import { onSigninCallback, userManager } from './data/oidc'
+import AuthGate from './components/auth/AuthGate'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
     <BrowserRouter>
-      <ProfileProvider>
-        <ReadingPositionProvider>
-          <DarkModeProvider>
-            <BooksProvider>
-              <App />
-            </BooksProvider>
-          </DarkModeProvider>
-        </ReadingPositionProvider>
-      </ProfileProvider>
+      <AuthProvider userManager={userManager} onSigninCallback={onSigninCallback}>
+        <AuthGate>
+          <ProfileProvider>
+            <ReadingPositionProvider>
+              <DarkModeProvider>
+                <BooksProvider>
+                  <App />
+                </BooksProvider>
+              </DarkModeProvider>
+            </ReadingPositionProvider>
+          </ProfileProvider>
+        </AuthGate>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )
