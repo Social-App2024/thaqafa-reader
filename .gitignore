@@ -24,5 +24,3 @@ dist-ssr
 *.sw?
 .vercel
 coverage
-
-src/data/oidc.ts
