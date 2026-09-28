@@ -1,12 +1,12 @@
 import { withAuthenticationRequired } from 'react-oidc-context'
 import { useTranslation } from 'react-i18next'
-import type { PropsWithChildren } from 'react'
+import { Outlet } from 'react-router'
 
-const ProtectedRoute = ({ children }: PropsWithChildren) => {
-  const Guarded = withAuthenticationRequired(() => children, {
-    OnRedirecting: () => <RedirectionScreen />,
-  })
+const Guarded = withAuthenticationRequired(() => <Outlet />, {
+  OnRedirecting: () => <RedirectionScreen />,
+})
 
+const ProtectedRoute = () => {
   return <Guarded />
 }
 
