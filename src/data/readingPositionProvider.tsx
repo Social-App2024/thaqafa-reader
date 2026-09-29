@@ -1,8 +1,18 @@
-import { createContext, useContext, useCallback, useEffect, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  type ReactNode,
+} from 'react'
 import useLocalStorageState from 'use-local-storage-state'
 import { useAuth } from 'react-oidc-context'
-import { saveReadingPosition, getAllReadingPositions } from '../api/readingPosition'
+import {
+  saveReadingPosition,
+  getAllReadingPositions,
+} from '../api/readingPosition'
 import { useProfile } from './profileProvider'
+import { useUserProfile } from '../queries/profile'
 
 interface ReadingPosition {
   location: string | number
@@ -20,64 +30,84 @@ interface UserReadingPositions {
 
 interface ReadingPositionContextType {
   getPosition: (bookId: string, userId: string) => string | number | null
-  savePosition: (bookId: string, userId: string, location: string | number) => void
+  savePosition: (
+    bookId: string,
+    userId: string,
+    location: string | number,
+  ) => void
   clearPosition: (bookId: string, userId: string) => void
 }
 
-const ReadingPositionContext = createContext<ReadingPositionContextType | undefined>(undefined)
+const ReadingPositionContext = createContext<
+  ReadingPositionContextType | undefined
+>(undefined)
 
-export const ReadingPositionProvider = ({ children }: { children: ReactNode }) => {
-  const { userId } = useProfile()
+export const ReadingPositionProvider = ({
+  children,
+}: {
+  children: ReactNode
+}) => {
+  // const { userId } = useProfile()
+  const { data: profile } = useUserProfile()
   const auth = useAuth()
-  const [allPositions, setAllPositions] = useLocalStorageState<UserReadingPositions>(
-    'reading-positions',
-    { defaultValue: {} }
+  const [allPositions, setAllPositions] =
+    useLocalStorageState<UserReadingPositions>('reading-positions', {
+      defaultValue: {},
+    })
+
+  const getPosition = useCallback(
+    (bookId: string, userId: string) => {
+      return allPositions[userId]?.[bookId]?.location || null
+    },
+    [allPositions],
   )
 
-  const getPosition = useCallback((bookId: string, userId: string) => {
-    return allPositions[userId]?.[bookId]?.location || null
-  }, [allPositions])
+  const savePosition = useCallback(
+    (bookId: string, userId: string, location: string | number) => {
+      if (!bookId || location === 0) return
 
-  const savePosition = useCallback((bookId: string, userId: string, location: string | number) => {
-    if (!bookId || location === 0) return
-
-    const newPosition: ReadingPosition = {
-      location,
-      timestamp: Date.now()
-    }
-
-    setAllPositions(prev => ({
-      ...prev,
-      [userId]: {
-        ...prev[userId],
-        [bookId]: newPosition
+      const newPosition: ReadingPosition = {
+        location,
+        timestamp: Date.now(),
       }
-    }))
 
-    // Save to backend immediately (no complex sync logic) — only when signed in
-    if (!auth.isAuthenticated) return
-    saveReadingPosition(bookId, newPosition).catch(error => {
-      console.error('[ReadingPosition] Failed to sync to backend:', error)
-    })
-  }, [setAllPositions, auth.isAuthenticated])
+      setAllPositions((prev) => ({
+        ...prev,
+        [userId]: {
+          ...prev[userId],
+          [bookId]: newPosition,
+        },
+      }))
 
-  const clearPosition = useCallback((bookId: string, userId: string) => {
-    setAllPositions(prev => {
-      const updated = { ...prev }
-      if (updated[userId]) {
-        delete updated[userId][bookId]
-        // Clean up empty user entries
-        if (Object.keys(updated[userId]).length === 0) {
-          delete updated[userId]
+      // Save to backend immediately (no complex sync logic) — only when signed in
+      if (!auth.isAuthenticated) return
+      saveReadingPosition(bookId, newPosition).catch((error) => {
+        console.error('[ReadingPosition] Failed to sync to backend:', error)
+      })
+    },
+    [setAllPositions, auth.isAuthenticated],
+  )
+
+  const clearPosition = useCallback(
+    (bookId: string, userId: string) => {
+      setAllPositions((prev) => {
+        const updated = { ...prev }
+        if (updated[userId]) {
+          delete updated[userId][bookId]
+          // Clean up empty user entries
+          if (Object.keys(updated[userId]).length === 0) {
+            delete updated[userId]
+          }
         }
-      }
-      return updated
-    })
-  }, [setAllPositions])
+        return updated
+      })
+    },
+    [setAllPositions],
+  )
 
   // Load positions from backend once signed in (localStorage only when logged out)
   useEffect(() => {
-    if (!userId || !auth.isAuthenticated) return
+    if (!profile?.id || !auth.isAuthenticated) return
 
     const loadBackendPositions = async () => {
       try {
@@ -87,24 +117,26 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
           return
         }
 
-        setAllPositions(prev => {
+        setAllPositions((prev) => {
           const merged = { ...prev }
 
-          if (!merged[userId]) {
-            merged[userId] = {}
+          if (!merged[profile?.id]) {
+            merged[profile?.id] = {}
           }
 
-          Object.entries(backendPositions).forEach(([bookId, backendPos]: [string, any]) => {
-            const localPos = merged[userId][bookId]
+          Object.entries(backendPositions).forEach(
+            ([bookId, backendPos]: [string, any]) => {
+              const localPos = merged[profile?.id][bookId]
 
-            // Backend wins if newer or no local copy exists
-            if (!localPos || backendPos.timestamp > localPos.timestamp) {
-              merged[userId][bookId] = {
-                location: backendPos.location,
-                timestamp: backendPos.timestamp
+              // Backend wins if newer or no local copy exists
+              if (!localPos || backendPos.timestamp > localPos.timestamp) {
+                merged[profile?.id][bookId] = {
+                  location: backendPos.location,
+                  timestamp: backendPos.timestamp,
+                }
               }
-            }
-          })
+            },
+          )
 
           return merged
         })
@@ -114,14 +146,16 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
     }
 
     loadBackendPositions()
-  }, [userId, auth.isAuthenticated, setAllPositions])
+  }, [profile, auth.isAuthenticated, setAllPositions])
 
   return (
-    <ReadingPositionContext.Provider value={{
-      getPosition,
-      savePosition,
-      clearPosition
-    }}>
+    <ReadingPositionContext.Provider
+      value={{
+        getPosition,
+        savePosition,
+        clearPosition,
+      }}
+    >
       {children}
     </ReadingPositionContext.Provider>
   )
@@ -130,7 +164,9 @@ export const ReadingPositionProvider = ({ children }: { children: ReactNode }) =
 export const useReadingPosition = () => {
   const context = useContext(ReadingPositionContext)
   if (!context) {
-    throw new Error('useReadingPosition must be used within ReadingPositionProvider')
+    throw new Error(
+      'useReadingPosition must be used within ReadingPositionProvider',
+    )
   }
   return context
 }

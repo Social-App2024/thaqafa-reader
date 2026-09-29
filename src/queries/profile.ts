@@ -1,6 +1,7 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { useAuth } from 'react-oidc-context'
 import { fetchUserProfile } from '../api/userProfile'
+import type { User } from '../types/profile'
 
 // Five Minutes
 const PROFILE_STALE_TIME = 1000 * 60 * 5
@@ -14,7 +15,7 @@ export const UserProfileQueryOptions = (
   access_token: string | undefined,
   enabled: boolean = true,
 ) =>
-  queryOptions({
+  queryOptions<User>({
     queryKey: UserProfileQueryKey(sub),
     queryFn: async () => await fetchUserProfile(access_token),
     staleTime: PROFILE_STALE_TIME,

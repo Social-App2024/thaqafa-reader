@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import type { User } from '../../types/profile'
 
-export default function ProfileBar({ profile }: { profile: User }) {
+export default function ProfileBar({ profile }: { profile: User | undefined }) {
   const auth = useAuth()
   const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
@@ -70,7 +70,7 @@ export default function ProfileBar({ profile }: { profile: User }) {
             {profile.picture ? (
               // Handle actual valid profile link from backend or s3 storage equiv
               <img
-                src="/images/default_profile.png"
+                src={profile.picture}
                 alt={t('layout.profile_bar.profile_alt')}
                 className="w-12 h-12 rounded-full object-cover"
               />

@@ -19,22 +19,22 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
     <QueryClientProvider client={QueryClient}>
       <BrowserRouter>
-        <ProfileProvider>
-          <ReadingPositionProvider>
-            <DarkModeProvider>
-              <AuthProvider
-                userManager={userManager}
-                onSigninCallback={onSigninCallback}
-              >
-                <AuthGate>
-                  <BooksProvider>
-                    <App />
-                  </BooksProvider>
-                </AuthGate>
-              </AuthProvider>
-            </DarkModeProvider>
-          </ReadingPositionProvider>
-        </ProfileProvider>
+        {/* <ProfileProvider> */}
+        <DarkModeProvider>
+          <AuthProvider
+            userManager={userManager}
+            onSigninCallback={onSigninCallback}
+          >
+            <ReadingPositionProvider>
+              <AuthGate>
+                <BooksProvider>
+                  <App />
+                </BooksProvider>
+              </AuthGate>
+            </ReadingPositionProvider>
+          </AuthProvider>
+        </DarkModeProvider>
+        {/* </ProfileProvider> */}
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

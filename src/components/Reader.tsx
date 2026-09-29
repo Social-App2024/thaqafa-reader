@@ -7,17 +7,17 @@ import ReaderWrapper from './ReaderWrapper'
 import { useBooks } from '../data/booksProvider'
 import { useDarkMode } from '../data/darkModeProvider'
 import { useReadingPosition } from '../data/readingPositionProvider'
-import { useProfile } from '../data/profileProvider'
 import { ReactReaderStyle } from '../../lib/ReactReader/style'
 import { ShareContextMenu } from './ShareContextMenu'
 import { fetchBookContent } from '../api/bookContent'
 import { usePubSub } from '../context/PubSubContext'
-import { PubSub } from "../util/pubSub"
+import { PubSub } from '../util/pubSub'
+import { useUserProfile } from '../queries/profile'
 
 export function Reader() {
   const booksContext = useBooks() as any
   const { isDarkMode } = useDarkMode()
-  const { userId } = useProfile()
+  const { data: profile } = useUserProfile()
   const { getPosition, savePosition } = useReadingPosition()
   const rendition = useRef<Rendition | undefined>(undefined)
   const [location, setLocation] = useState<string | number>(0)
@@ -25,7 +25,9 @@ export function Reader() {
   const pubsub = usePubSub()
   const saveTimerRef = useRef<number | null>(null)
   const textSelectionCleanupRef = useRef<(() => void) | null>(null)
-  const [bookBlobUrl, setBookBlobUrl] = useState<string | ArrayBuffer | null>(null)
+  const [bookBlobUrl, setBookBlobUrl] = useState<string | ArrayBuffer | null>(
+    null,
+  )
   const [isLoadingBook, setIsLoadingBook] = useState(false)
   const [bookLoadError, setBookLoadError] = useState<string | null>(null)
 
@@ -34,9 +36,10 @@ export function Reader() {
   const bookTitle = booksContext?.selectedBook?.title || DEMO_NAME
   // API books carry `authors: string[]`; the demo fallback list uses `author: string`
   const bookAuthors = booksContext?.selectedBook?.authors
-  const bookAuthor = (Array.isArray(bookAuthors) && bookAuthors.length > 0
-    ? bookAuthors.join(', ')
-    : booksContext?.selectedBook?.author) || 'Unknown Author'
+  const bookAuthor =
+    (Array.isArray(bookAuthors) && bookAuthors.length > 0
+      ? bookAuthors.join(', ')
+      : booksContext?.selectedBook?.author) || 'Unknown Author'
   const isRTL = booksContext?.selectedBook?.isRTL === true
 
   // Latest book info for the text-selection handler: the rendition (and its
@@ -78,8 +81,9 @@ export function Reader() {
       return
     }
 
-    const isPublicUrl = selectedBook.url?.startsWith('/files/') ||
-                        selectedBook.url?.startsWith('http')
+    const isPublicUrl =
+      selectedBook.url?.startsWith('/files/') ||
+      selectedBook.url?.startsWith('http')
 
     if (isPublicUrl) {
       setBookBlobUrl(selectedBook.url)
@@ -138,11 +142,12 @@ export function Reader() {
   useEffect(() => {
     clearSaveTimer()
 
-    const savedLocation = (bookId && userId) ? getPosition(bookId, userId) : null
+    const savedLocation =
+      bookId && profile?.id ? getPosition(bookId, profile.id) : null
     setLocation(savedLocation || 0)
 
     pubsub.publish('closeContextMenu')
-  }, [bookId, userId, getPosition, pubsub])
+  }, [bookId, profile?.id, getPosition, pubsub])
 
   // Sync with external system: epub.js rendition theme
   useEffect(() => {
@@ -176,12 +181,12 @@ export function Reader() {
   function handleLocationChange(loc: string) {
     setLocation(loc)
 
-    if (!bookId || !userId) return
+    if (!bookId || !profile?.id) return
 
     clearSaveTimer()
 
     saveTimerRef.current = window.setTimeout(() => {
-      savePosition(bookId, userId, loc)
+      savePosition(bookId, profile?.id, loc)
     }, 1000)
   }
 
@@ -194,17 +199,24 @@ export function Reader() {
     setupLocationGeneration(_rendition)
     setupErrorHandling(_rendition)
     textSelectionCleanupRef.current?.()
-    textSelectionCleanupRef.current = setupTextSelection(_rendition, pubsub, bookInfoRef)
+    textSelectionCleanupRef.current = setupTextSelection(
+      _rendition,
+      pubsub,
+      bookInfoRef,
+    )
   }
 
   function setupLocationGeneration(rendition: Rendition) {
     const book = rendition.book
     if (book && !book.locations?.length()) {
-      book.locations.generate(150).then(() => {
-        console.log('[Reader] Locations generated:', book.locations.length())
-      }).catch((error: Error) => {
-        console.error('[Reader] Failed to generate locations:', error)
-      })
+      book.locations
+        .generate(150)
+        .then(() => {
+          console.log('[Reader] Locations generated:', book.locations.length())
+        })
+        .catch((error: Error) => {
+          console.error('[Reader] Failed to generate locations:', error)
+        })
     }
   }
 
@@ -223,16 +235,18 @@ export function Reader() {
   if (isLoadingBook) {
     return (
       <ReaderWrapper>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          flexDirection: 'column',
-          gap: '16px',
-          backgroundColor: isDarkMode ? '#000000' : '#ffffff',
-          color: isDarkMode ? '#e5e5e5' : '#000000'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            flexDirection: 'column',
+            gap: '16px',
+            backgroundColor: isDarkMode ? '#000000' : '#ffffff',
+            color: isDarkMode ? '#e5e5e5' : '#000000',
+          }}
+        >
           <div style={{ fontSize: '18px' }}>Loading book...</div>
           <div style={{ fontSize: '14px', opacity: 0.7 }}>{bookTitle}</div>
         </div>
@@ -243,17 +257,21 @@ export function Reader() {
   if (bookLoadError && !bookBlobUrl) {
     return (
       <ReaderWrapper>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          flexDirection: 'column',
-          gap: '16px',
-          backgroundColor: isDarkMode ? '#000000' : '#ffffff',
-          color: isDarkMode ? '#e5e5e5' : '#000000'
-        }}>
-          <div style={{ fontSize: '18px', color: '#ff4444' }}>Failed to load book</div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            flexDirection: 'column',
+            gap: '16px',
+            backgroundColor: isDarkMode ? '#000000' : '#ffffff',
+            color: isDarkMode ? '#e5e5e5' : '#000000',
+          }}
+        >
+          <div style={{ fontSize: '18px', color: '#ff4444' }}>
+            Failed to load book
+          </div>
           <div style={{ fontSize: '14px', opacity: 0.7 }}>{bookLoadError}</div>
           <button
             onClick={() => window.location.reload()}
@@ -265,7 +283,7 @@ export function Reader() {
               color: isDarkMode ? '#e5e5e5' : '#000000',
               border: '1px solid',
               borderColor: isDarkMode ? '#555' : '#ccc',
-              borderRadius: '4px'
+              borderRadius: '4px',
             }}
           >
             Retry
@@ -302,13 +320,13 @@ export function Reader() {
 
 function isValidEpub(arrayBuffer: ArrayBuffer): boolean {
   const view = new Uint8Array(arrayBuffer)
-  return view[0] === 0x50 && view[1] === 0x4B // PK signature
+  return view[0] === 0x50 && view[1] === 0x4b // PK signature
 }
 
 function setupTextSelection(
   rendition: Rendition,
   pubsub: PubSub,
-  bookInfoRef: { current: { bookTitle: string; bookAuthor: string } }
+  bookInfoRef: { current: { bookTitle: string; bookAuthor: string } },
 ): () => void {
   let currentHighlight: string | null = null
   let currentContents: Contents | null = null
@@ -329,16 +347,17 @@ function setupTextSelection(
     // Range.toString() returns the raw source text — newlines/indentation from
     // the epub's XHTML markup come through as-is and render as unwanted gaps in
     // the share-quote image, so collapse whitespace runs into single spaces
-    const selectedText = rendition.getRange(cfiRange).toString().replace(/\s+/g, ' ').trim()
+    const selectedText = rendition
+      .getRange(cfiRange)
+      .toString()
+      .replace(/\s+/g, ' ')
+      .trim()
 
-    rendition.annotations.add(
-      'highlight',
-      cfiRange,
-      {},
-      () => {},
-      'hl',
-      { fill: '#03b1fc', 'fill-opacity': '0.5', 'mix-blend-mode': 'multiply' }
-    )
+    rendition.annotations.add('highlight', cfiRange, {}, () => { }, 'hl', {
+      fill: '#03b1fc',
+      'fill-opacity': '0.5',
+      'mix-blend-mode': 'multiply',
+    })
 
     currentHighlight = cfiRange
     currentContents = contents
@@ -355,7 +374,7 @@ function setupTextSelection(
         top: rangeRect.top,
         bottom: rangeRect.bottom,
         width: rangeRect.width,
-        height: rangeRect.height
+        height: rangeRect.height,
       })
 
       // Get iframe position on the page
@@ -367,10 +386,10 @@ function setupTextSelection(
           left: iframeRect.left,
           top: iframeRect.top,
           width: iframeRect.width,
-          height: iframeRect.height
+          height: iframeRect.height,
         })
 
-        const x = iframeRect.left + rangeRect.left + (rangeRect.width / 2)
+        const x = iframeRect.left + rangeRect.left + rangeRect.width / 2
         const y = iframeRect.top + rangeRect.bottom + 5
 
         console.log('[handleSelection] Publishing position:', { x, y })
@@ -381,7 +400,7 @@ function setupTextSelection(
           y,
           text: selectedText,
           bookTitle: bookInfoRef.current.bookTitle,
-          bookAuthor: bookInfoRef.current.bookAuthor
+          bookAuthor: bookInfoRef.current.bookAuthor,
         })
       }
     }
@@ -420,10 +439,12 @@ function setupTextSelection(
 
     pollTimer = window.setInterval(() => {
       try {
-        const contentsList = rendition.getContents?.() as unknown as Contents[] | undefined
+        const contentsList = rendition.getContents?.() as unknown as
+          Contents[] | undefined
         const contents = contentsList?.[0]
         const selection = contents?.window?.getSelection?.()
-        const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
+        const range =
+          selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
 
         if (contents && selection && range && !range.collapsed) {
           let cfiRange: string | null = null
@@ -433,7 +454,11 @@ function setupTextSelection(
             cfiRange = null
           }
 
-          if (cfiRange && cfiRange !== lastSelectedCfi && cfiRange !== pendingCfi) {
+          if (
+            cfiRange &&
+            cfiRange !== lastSelectedCfi &&
+            cfiRange !== pendingCfi
+          ) {
             // New selection — wait one more tick so mid-drag changes settle
             // (mirrors epub.js' 250ms selectionchange debounce in Chrome)
             pendingCfi = cfiRange

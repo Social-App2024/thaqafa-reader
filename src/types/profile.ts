@@ -6,19 +6,19 @@ export type PublicUserInformation = {
   userType: UserType
   firstName: string
   lastName: string
-  country: string
+  country?: string
   gender?: string
   profession?: string
   tags: Tag[]
-  picture: string
-  birthDate: Date
-  description: string
+  picture?: string
+  birthDate?: Date
+  description?: string
 }
 
 export type User = PublicUserInformation & {
   email: string
   onboarded: boolean
-  portfolioPublic: boolean
+  portfolioPublic?: boolean
   createdAt: Date
 }
 

@@ -33,7 +33,7 @@ export const userManager = new UserManager({
   // Persist the session across tabs and browser restarts (library default is
   // tab-scoped sessionStorage) — required for the shared SSO login with
   // Thaqafa-Frontend to survive beyond the current tab.
-  userStore: new WebStorageStateStore({ store: window.localStorage }),
+  // userStore: new WebStorageStateStore({ store: window.localStorage }),
 })
 
 // sessionStorage key under which AuthGate's `prompt=none` SSO probe remembers

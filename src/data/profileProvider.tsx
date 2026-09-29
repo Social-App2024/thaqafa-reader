@@ -1,46 +1,38 @@
-import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  type ReactNode,
+} from 'react'
 import { useAuth } from 'react-oidc-context'
 import { fetchUserProfile } from '../api/userProfile'
+import type { User } from '../types/profile'
 
 // Fallback userId for offline mode or when API fails
 const OFFLINE_USER_ID = '66b7a5025cf5d67e2eeaa1fb'
 
-interface UserProfile {
-  id: string
-  userType: string
-  firstName: string
-  lastName: string
-  email: string
-  country: string
-  gender: string | null
-  profession: string
-  tags: any
-  picture: string
-  birthDate: string | null
-  onboarded: boolean
-  description: string | null
-  createdAt: string | null
-}
-
-const OFFLINE_PROFILE: UserProfile = {
+export const OFFLINE_PROFILE: User = {
   id: OFFLINE_USER_ID,
-  userType: 'offline',
+  userType: 'private',
   firstName: 'Offline',
   lastName: 'User',
   email: '',
   country: '',
-  gender: null,
+  gender: undefined,
   profession: '',
-  tags: null,
+  tags: [],
   picture: '',
-  birthDate: null,
+  birthDate: new Date(1980, 0, 0),
   onboarded: false,
-  description: null,
-  createdAt: null
+  description: undefined,
+  portfolioPublic: false,
+  createdAt: new Date(1980, 0, 0),
 }
 
 interface ProfileContextType {
-  profile: UserProfile | null
+  profile: User | null
   userId: string
   isLoading: boolean
   error: string | null
@@ -51,7 +43,7 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined)
 export const ProfileProvider = ({ children }: { children: ReactNode }) => {
   const auth = useAuth()
   const accessToken = auth.user?.access_token
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profile, setProfile] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -69,7 +61,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        const userProfile = await fetchUserProfile(accessToken) as UserProfile
+        const userProfile = (await fetchUserProfile(accessToken)) as User
         if (cancelled) return
 
         console.log('[Profile] User profile loaded:', userProfile.id)
@@ -77,7 +69,10 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
       } catch (err: any) {
         if (cancelled) return
 
-        console.warn('[Profile] Failed to load user profile, using offline userId:', err.message)
+        console.warn(
+          '[Profile] Failed to load user profile, using offline userId:',
+          err.message,
+        )
         setError(err.message || 'Failed to load profile')
         setProfile(OFFLINE_PROFILE)
       } finally {
@@ -91,12 +86,15 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [auth.isAuthenticated, accessToken])
 
-  const contextValue = useMemo(() => ({
-    profile,
-    userId: profile?.id || OFFLINE_USER_ID,
-    isLoading,
-    error
-  }), [profile, isLoading, error])
+  const contextValue = useMemo(
+    () => ({
+      profile,
+      userId: profile?.id || OFFLINE_USER_ID,
+      isLoading,
+      error,
+    }),
+    [profile, isLoading, error],
+  )
 
   return (
     <ProfileContext.Provider value={contextValue}>
