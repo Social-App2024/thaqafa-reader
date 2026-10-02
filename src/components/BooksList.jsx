@@ -1,26 +1,34 @@
 import { useCallback, useState, useMemo } from 'react'
 import { useBooks } from '../data/booksProvider'
+import { storageUrl } from '../api/storageApi'
 
 const BooksList = () => {
   const { books, selectedBook, setSelectedBook } = useBooks()
   const [searchQuery, setSearchQuery] = useState('')
 
-  const getThumbnail = useCallback((index) => {
-    return books?.[index]?.frontCoverUrl;
-  }, [books])
+  const getThumbnail = useCallback(
+    (index) => {
+      return books?.[index]?.frontCoverUrl
+    },
+    [books],
+  )
 
-  const handleBookClick = useCallback((book) => {
-    setSelectedBook(book)
-  }, [setSelectedBook])
+  const handleBookClick = useCallback(
+    (book) => {
+      setSelectedBook(book)
+    },
+    [setSelectedBook],
+  )
 
   const filteredBooks = useMemo(() => {
     if (!books || !Array.isArray(books)) return []
     if (!searchQuery.trim()) return books
 
     const query = searchQuery.toLowerCase()
-    return books.filter((book) =>
-      book.title?.toLowerCase().includes(query) ||
-      book.author?.toLowerCase().includes(query)
+    return books.filter(
+      (book) =>
+        book.title?.toLowerCase().includes(query) ||
+        book.author?.toLowerCase().includes(query),
     )
   }, [books, searchQuery])
 
@@ -44,10 +52,14 @@ const BooksList = () => {
         />
       </div>
       {filteredBooks.map((book, index) => (
-        <div key={book.bookId} onClick={() => handleBookClick(book)} className="cursor-pointer">
+        <div
+          key={book.bookId}
+          onClick={() => handleBookClick(book)}
+          className="cursor-pointer"
+        >
           <img
             className="w-30 h-30 max-w-[130px]"
-            src={getThumbnail(index)}
+            src={storageUrl(getThumbnail(index))}
           ></img>
         </div>
       ))}
