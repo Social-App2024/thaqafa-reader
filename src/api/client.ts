@@ -2,7 +2,7 @@ import axios from 'axios'
 import type { User } from 'oidc-client-ts'
 import { userManager } from '../data/oidc'
 
-const API_URL = 'http://localhost:9092/'
+const API_URL = '/api/'
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -25,9 +25,9 @@ authApi.interceptors.request.use(async (config) => {
 
 let renewal: Promise<User | null> | null = null
 const renewToken = () =>
-  (renewal ??= userManager.signinSilent().finally(() => {
-    renewal = null
-  }))
+(renewal ??= userManager.signinSilent().finally(() => {
+  renewal = null
+}))
 
 authApi.interceptors.response.use(undefined, async (error) => {
   const original = error.config
