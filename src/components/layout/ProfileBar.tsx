@@ -7,6 +7,7 @@ import { useAuth } from 'react-oidc-context'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import type { User } from '../../types/profile'
+import { storageUrl } from '../../api/storageApi'
 
 export default function ProfileBar({ profile }: { profile: User | undefined }) {
   const auth = useAuth()
@@ -70,7 +71,7 @@ export default function ProfileBar({ profile }: { profile: User | undefined }) {
             {profile.picture ? (
               // Handle actual valid profile link from backend or s3 storage equiv
               <img
-                src={profile.picture}
+                src={storageUrl(profile.picture)!}
                 alt={t('layout.profile_bar.profile_alt')}
                 className="w-12 h-12 rounded-full object-cover"
               />

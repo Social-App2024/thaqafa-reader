@@ -82,7 +82,7 @@ export default function Header() {
           {/*     <FaUser /> */}
           {/*   </div> */}
           {/* </NavbarCenterItem> */}
-          <NavbarCenterItem link={'http://localhost:5173/search'}>
+          <NavbarCenterItem link={'/frontend/search'}>
             {' '}
             <div className="inline-block text-[28px]">
               <FaMagnifyingGlass />
