@@ -11,6 +11,11 @@
     }
   },
   "routes": {
+    "auth": {
+      "protected": {
+        "redirecting": "إعاة التوجيه الى تسجيل الدخول"
+      }
+    },
     "errors": {
       "not_found_title": "",
       "not_found_message": ""
