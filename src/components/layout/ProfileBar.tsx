@@ -10,7 +10,7 @@ import type { User } from '../../types/profile'
 
 export default function ProfileBar({ profile }: { profile: User | undefined }) {
   const auth = useAuth()
-  const { t, i18n } = useTranslation('common')
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const isArabic = i18n.language?.toLowerCase().startsWith('ar')
@@ -71,14 +71,14 @@ export default function ProfileBar({ profile }: { profile: User | undefined }) {
               // Handle actual valid profile link from backend or s3 storage equiv
               <img
                 src={profile.picture}
-                alt={t('layout.profile_bar.profile_alt')}
+                alt={t('navbar.profile_bar.profile_alt')}
                 className="w-12 h-12 rounded-full object-cover"
               />
             ) : (
               // handle default static profile picture
               <img
                 src="/images/default_profile.png"
-                alt={t('layout.profile_bar.profile_alt')}
+                alt={t('navbar.profile_bar.profile_alt')}
                 className="w-12 h-12 rounded-full object-cover"
               />
             )}
@@ -132,11 +132,11 @@ export default function ProfileBar({ profile }: { profile: User | undefined }) {
                   </div>
                   <button
                     type="button"
-                    className="w-full text-left font-space text-base md:text-sm px-3 py-2 rounded-xl hover:bg-primary/10 transition-colors transition-transform duration-200 ease-out hover:translate-x-1 hover:scale-[1.01] flex items-center gap-3"
+                    className="w-full text-left text-nowrap font-space text-base md:text-sm px-3 py-2 rounded-xl hover:bg-primary/10 transition-colors transition-transform duration-200 ease-out hover:translate-x-1 hover:scale-[1.01] flex items-center gap-3"
                     onClick={() => handleNavigate(`/profile/${profile.id}`)}
                   >
                     <FaCircleUser className="text-lg" />
-                    {t('layout.profile_bar.visit_profile')}
+                    {t('navbar.profile_bar.visit_profile')}
                   </button>
                   <button
                     type="button"
@@ -144,7 +144,7 @@ export default function ProfileBar({ profile }: { profile: User | undefined }) {
                     onClick={() => handleNavigate('/settings')}
                   >
                     <FaGear className="text-lg" />
-                    {t('tabs.settings')}
+                    {t('navbar.profile_bar.settings')}
                   </button>
                   <button
                     type="button"
@@ -152,7 +152,7 @@ export default function ProfileBar({ profile }: { profile: User | undefined }) {
                     onClick={() => handleNavigate('/faq')}
                   >
                     <FaQuestionCircle className="text-lg" />
-                    {t('layout.profile_bar.help')}
+                    {t('navbar.profile_bar.help')}
                   </button>
                   <button
                     type="button"
@@ -160,7 +160,7 @@ export default function ProfileBar({ profile }: { profile: User | undefined }) {
                     onClick={() => handleSignOut()}
                   >
                     <FaArrowRightFromBracket className="text-lg" />
-                    {t('layout.profile_bar.sign_out')}
+                    {t('navbar.profile_bar.sign_out')}
                   </button>
                 </div>
               </motion.div>

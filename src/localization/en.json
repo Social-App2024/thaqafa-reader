@@ -8,6 +8,13 @@
     "language": {
       "english": "EN",
       "arabic": "AR"
+    },
+    "profile_bar": {
+      "profile_alt": "Profile",
+      "visit_profile": "Visit Profile",
+      "help": "Help",
+      "settings": "Settings",
+      "sign_out": "Sign Out"
     }
   },
   "routes": {

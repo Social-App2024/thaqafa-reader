@@ -10,12 +10,17 @@ import type { PropsWithChildren } from 'react'
 
 interface NavbarCenterItemProps {
   link: string
+  external?: boolean
 }
 
 const NavbarCenterItem = ({
   children,
   link,
+  external = false,
 }: PropsWithChildren<NavbarCenterItemProps>) => {
+  if (external) {
+    return <a href={link}></a>
+  }
   return (
     <NavLink
       to={link}
@@ -35,7 +40,7 @@ export default function Header() {
   // Fetch profile data and feed it to whatever child component needs it.
   const { data, isLoading } = useUserProfile()
   // Should also handle selected route.. that being said, not really a priority considering this will only show a very small number of popular routes (4 for now)
-  const { t, i18n } = useTranslation('common')
+  const { t, i18n } = useTranslation()
   const locale = i18n.language
 
   return (

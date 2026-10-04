@@ -8,6 +8,13 @@
     "language": {
       "english": "الإنجليزية",
       "arabic": "العربية"
+    },
+    "profile_bar": {
+      "profile_alt": "حسابى الشخصى",
+      "visit_profile": "الحساب الشخصى",
+      "help": "المساعدة",
+      "settings": "الاعدادات",
+      "sign_out": "تسجيل الهور"
     }
   },
   "routes": {
